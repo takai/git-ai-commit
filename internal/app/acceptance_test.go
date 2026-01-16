@@ -18,7 +18,7 @@ func TestRunCreatesCommit(t *testing.T) {
 		writeFile(t, repo, "file.txt", "hello")
 		runGit(t, repo, "add", "file.txt")
 
-		if err := Run("", "", "", "", "", "", false, false, nil); err != nil {
+		if err := Run("", "", "", "", "", "", false, false, nil, false, false); err != nil {
 			t.Fatalf("Run error: %v", err)
 		}
 

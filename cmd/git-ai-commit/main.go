@@ -19,6 +19,8 @@ type options struct {
 	amend          bool
 	addAll         bool
 	includeFiles   []string
+	debugPrompt    bool
+	debugCommand   bool
 }
 
 func main() {
@@ -32,7 +34,19 @@ func main() {
 		printUsage(os.Stderr)
 		os.Exit(2)
 	}
-	if err := app.Run(opts.context, opts.contextFile, opts.systemPrompt, opts.promptStrategy, opts.promptPreset, opts.engine, opts.amend, opts.addAll, opts.includeFiles); err != nil {
+	if err := app.Run(
+		opts.context,
+		opts.contextFile,
+		opts.systemPrompt,
+		opts.promptStrategy,
+		opts.promptPreset,
+		opts.engine,
+		opts.amend,
+		opts.addAll,
+		opts.includeFiles,
+		opts.debugPrompt,
+		opts.debugCommand,
+	); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -67,6 +81,10 @@ func parseArgs(args []string) (options, error) {
 				opts.amend = true
 			case "all":
 				opts.addAll = true
+			case "debug-prompt":
+				opts.debugPrompt = true
+			case "debug-command":
+				opts.debugCommand = true
 			default:
 				return opts, fmt.Errorf("unknown option --%s", name)
 			}
@@ -160,5 +178,7 @@ func printUsage(out *os.File) {
 	fmt.Fprintln(out, "  --amend                   Amend the previous commit")
 	fmt.Fprintln(out, "  -a, --all                 Stage modified and deleted files before generating the message")
 	fmt.Fprintln(out, "  -i, --include VALUE       Stage specific files before generating the message")
+	fmt.Fprintln(out, "  --debug-prompt            Print the prompt before executing the engine")
+	fmt.Fprintln(out, "  --debug-command           Print the engine command before execution")
 	fmt.Fprintln(out, "  -h, --help                Show help")
 }

@@ -11,7 +11,7 @@ import (
 	"git-ai-commit/internal/prompt"
 )
 
-func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engineName string, amend, addAll bool, includeFiles []string) (err error) {
+func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engineName string, amend, addAll bool, includeFiles []string, debugPrompt, debugCommand bool) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -80,9 +80,16 @@ func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engin
 	}
 
 	promptText := prompt.Build(cfg.SystemPrompt, contextText, diff)
-	eng, err := selectEngine(cfg)
+	eng, commandLine, err := selectEngine(cfg)
 	if err != nil {
 		return err
+	}
+	if debugCommand {
+		fmt.Fprintf(os.Stderr, "engine command: %s\n", commandLine)
+	}
+	if debugPrompt {
+		fmt.Fprintln(os.Stderr, "prompt:")
+		fmt.Fprintln(os.Stderr, promptText)
 	}
 
 	output, err := eng.Generate(promptText)
@@ -132,15 +139,15 @@ func applyPromptStrategy(base, override, strategy string) (string, error) {
 	}
 }
 
-func selectEngine(cfg config.Config) (engine.Engine, error) {
+func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	name := strings.TrimSpace(cfg.DefaultEngine)
 	if name == "" {
-		return nil, fmt.Errorf("no engine configured")
+		return nil, "", fmt.Errorf("no engine configured")
 	}
 	if spec, ok := cfg.Engines[name]; ok && spec.Command != "" {
-		return engine.CLI{Command: spec.Command, Args: spec.Args}, nil
+		return engine.CLI{Command: spec.Command, Args: spec.Args}, strings.Join(append([]string{spec.Command}, spec.Args...), " "), nil
 	}
-	return engine.CLI{Command: name, Args: nil}, nil
+	return engine.CLI{Command: name, Args: nil}, name, nil
 }
 
 func stageChanges(addAll bool, includeFiles []string) (func(), error) {

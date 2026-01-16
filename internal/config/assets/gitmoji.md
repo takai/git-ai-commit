@@ -1,22 +1,32 @@
-Generate a Git commit message following the gitmoji convention.
+Generate a Git commit message following the official gitmoji specification
+(https://gitmoji.dev/).
 
 Rules:
-- Start the subject line with a single gitmoji emoji that best represents the change
-  (e.g. ✨ for new features, 🐛 for bug fixes, 📝 for documentation, ♻️ for refactoring)
-- After the emoji, add a single space, then the commit subject
-- Use the imperative mood in the subject (e.g. "add", "fix", "update")
-- Keep the subject concise (preferably under 50 characters)
-- Do not end the subject with a period
-- Use lowercase for the subject unless a proper noun is required
+- Start the commit message with exactly one gitmoji emoji that represents the
+  purpose of the change, as defined in the official gitmoji list
+  (e.g. ✨ introduce new features, 🐛 fix bugs, 📝 add or update documentation,
+  ♻️ refactor code, ⚡ improve performance, 🔧 change configuration)
 
-- Optionally include a body separated by a blank line
-- The body should explain why the change was made or provide important context
-- Wrap body lines at approximately 72 characters
+- The first line must follow this format:
+  <emoji> <subject>
+
+- Subject rules:
+  - Use the imperative mood (e.g. "add", "fix", "update", "remove")
+  - Describe what the change does, not what you did
+  - Keep it concise (preferably under 50 characters)
+  - Do not end with a period
+  - Use lowercase, unless a proper noun is required
+
+- Body (optional):
+  - Add a blank line after the subject before the body
+  - Use the body to explain *why* the change was made or provide important context
+  - Avoid repeating the subject line
+  - Wrap lines at approximately 72 characters
 
 - Use only one emoji per commit
-- Choose the emoji according to the official gitmoji specification
-- Do not mix gitmoji with other commit conventions (e.g. Conventional Commits types)
+- Do not include Conventional Commits types (feat, fix, etc.)
+- Do not mix multiple conventions in a single commit
 - Do not mention the diff, file names, or line numbers explicitly
-- Output only the commit message, with no additional commentary
+- Output only the commit message, with no explanations or metadata
 
 Write the commit message based on the following git diff:

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -18,51 +18,147 @@ type options struct {
 	engine         string
 	amend          bool
 	addAll         bool
-	includeFiles   stringSlice
+	includeFiles   []string
 }
 
 func main() {
-	opts := parseFlags()
+	opts, err := parseArgs(os.Args[1:])
+	if err != nil {
+		if errors.Is(err, errHelp) {
+			printUsage(os.Stdout)
+			return
+		}
+		fmt.Fprintln(os.Stderr, err)
+		printUsage(os.Stderr)
+		os.Exit(2)
+	}
 	if err := app.Run(opts.context, opts.contextFile, opts.systemPrompt, opts.promptStrategy, opts.promptPreset, opts.engine, opts.amend, opts.addAll, opts.includeFiles); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func parseFlags() options {
+var errHelp = errors.New("help requested")
+
+func parseArgs(args []string) (options, error) {
 	var opts options
-	flag.StringVar(&opts.context, "context", "", "Additional context for the commit message")
-	flag.StringVar(&opts.contextFile, "context-file", "", "Path to a file containing additional context")
-	flag.StringVar(&opts.systemPrompt, "system-prompt", "", "Override system prompt text")
-	flag.StringVar(&opts.promptStrategy, "prompt-strategy", "", "Prompt override strategy: replace, prepend, append")
-	flag.StringVar(&opts.promptPreset, "prompt-preset", "", "Select a bundled prompt preset (default, conventional, gitmoji, karma)")
-	flag.StringVar(&opts.engine, "engine", "", "LLM engine name override")
-	flag.BoolVar(&opts.amend, "amend", false, "Amend the previous commit")
-	flag.BoolVar(&opts.addAll, "all", false, "Stage modified and deleted files before generating the message")
-	flag.BoolVar(&opts.addAll, "a", false, "Shorthand for --all")
-	flag.Var(&opts.includeFiles, "include", "Stage specific files before generating the message")
-	flag.Var(&opts.includeFiles, "i", "Shorthand for --include")
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: git-ai-commit [options]")
-		fmt.Fprintln(os.Stderr, "Generates a commit message from staged diff and commits safely.")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "Options:")
-		flag.PrintDefaults()
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			return opts, fmt.Errorf("unexpected arguments after --")
+		}
+		if strings.HasPrefix(arg, "--") {
+			name, value, hasValue := strings.Cut(arg[2:], "=")
+			switch name {
+			case "help":
+				return opts, errHelp
+			case "context", "context-file", "system-prompt", "prompt-strategy", "prompt-preset", "engine", "include":
+				if !hasValue {
+					if i+1 >= len(args) {
+						return opts, fmt.Errorf("missing value for --%s", name)
+					}
+					i++
+					value = args[i]
+				}
+				if err := applyLongOption(&opts, name, value); err != nil {
+					return opts, err
+				}
+			case "amend":
+				opts.amend = true
+			case "all":
+				opts.addAll = true
+			default:
+				return opts, fmt.Errorf("unknown option --%s", name)
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") && arg != "-" {
+			if err := parseShortOptions(&opts, arg, args, &i); err != nil {
+				return opts, err
+			}
+			continue
+		}
+		return opts, fmt.Errorf("unexpected argument %q", arg)
 	}
-	flag.Parse()
-	return opts
+	return opts, nil
 }
 
-type stringSlice []string
-
-func (s *stringSlice) String() string {
-	return strings.Join(*s, ",")
-}
-
-func (s *stringSlice) Set(value string) error {
-	if value == "" {
-		return nil
+func applyLongOption(opts *options, name, value string) error {
+	switch name {
+	case "context":
+		opts.context = value
+	case "context-file":
+		opts.contextFile = value
+	case "system-prompt":
+		opts.systemPrompt = value
+	case "prompt-strategy":
+		opts.promptStrategy = value
+	case "prompt-preset":
+		opts.promptPreset = value
+	case "engine":
+		opts.engine = value
+	case "include":
+		if value == "" {
+			return fmt.Errorf("missing value for --include")
+		}
+		opts.includeFiles = append(opts.includeFiles, value)
+	default:
+		return fmt.Errorf("unknown option --%s", name)
 	}
-	*s = append(*s, value)
 	return nil
+}
+
+func parseShortOptions(opts *options, arg string, args []string, index *int) error {
+	cluster := arg[1:]
+	if cluster == "h" {
+		return errHelp
+	}
+	for i := 0; i < len(cluster); i++ {
+		switch cluster[i] {
+		case 'a':
+			opts.addAll = true
+		case 'i':
+			value := ""
+			if i+1 < len(cluster) {
+				if cluster[i+1] == '=' {
+					value = cluster[i+2:]
+				} else {
+					value = cluster[i+1:]
+				}
+				i = len(cluster)
+			} else {
+				if *index+1 >= len(args) {
+					return fmt.Errorf("missing value for -i")
+				}
+				*index++
+				value = args[*index]
+			}
+			if value == "" {
+				return fmt.Errorf("missing value for -i")
+			}
+			opts.includeFiles = append(opts.includeFiles, value)
+		case 'h':
+			return errHelp
+		default:
+			return fmt.Errorf("unknown option -%c", cluster[i])
+		}
+	}
+	return nil
+}
+
+func printUsage(out *os.File) {
+	fmt.Fprintln(out, "Usage: git-ai-commit [options]")
+	fmt.Fprintln(out, "Generates a commit message from staged diff and commits safely.")
+	fmt.Fprintln(out, "")
+	fmt.Fprintln(out, "Options:")
+	fmt.Fprintln(out, "  --context VALUE           Additional context for the commit message")
+	fmt.Fprintln(out, "  --context-file VALUE      Path to a file containing additional context")
+	fmt.Fprintln(out, "  --system-prompt VALUE     Override system prompt text")
+	fmt.Fprintln(out, "  --prompt-strategy VALUE   Prompt override strategy: replace, prepend, append")
+	fmt.Fprintln(out, "  --prompt-preset VALUE     Bundled prompt preset: default, conventional, gitmoji, karma")
+	fmt.Fprintln(out, "  --engine VALUE            LLM engine name override")
+	fmt.Fprintln(out, "  --amend                   Amend the previous commit")
+	fmt.Fprintln(out, "  -a, --all                 Stage modified and deleted files before generating the message")
+	fmt.Fprintln(out, "  -i, --include VALUE       Stage specific files before generating the message")
+	fmt.Fprintln(out, "  -h, --help                Show help")
 }

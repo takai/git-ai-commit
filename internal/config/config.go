@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ type Config struct {
 	DefaultEngine  string
 	SystemPrompt   string
 	PromptStrategy string
+	PromptPreset   string
 	Engines        map[string]EngineConfig
 }
 
@@ -20,26 +22,18 @@ type EngineConfig struct {
 	Args    []string
 }
 
-const defaultSystemPrompt = `Generate a single-line commit message following the Conventional Commits specification.
+//go:embed assets/*.md
+var promptFS embed.FS
 
-Rules:
-- IMPORTANT: Output only the commit message
-- Format: type: short summary
-- One line only
-- Types allowed: feat, fix, docs, style, refactor, test, chore
-- English only
-- No trailing period
-- Summary under 72 characters
-- Do not wrap the message in quotes or backticks
-- Make sure with version bump if needed
-
-Write the commit message based on the following git diff:`
+const defaultPromptPreset = "default"
 
 func Default() Config {
+	prompt, _ := LoadPromptPreset(defaultPromptPreset)
 	return Config{
 		DefaultEngine:  "codex",
-		SystemPrompt:   defaultSystemPrompt,
+		SystemPrompt:   prompt,
 		PromptStrategy: "append",
+		PromptPreset:   defaultPromptPreset,
 		Engines:        map[string]EngineConfig{},
 	}
 }
@@ -64,11 +58,23 @@ func Load() (Config, error) {
 	if v, ok := values["engine"]; ok {
 		cfg.DefaultEngine = v.str
 	}
-	if v, ok := values["system_prompt"]; ok {
-		cfg.SystemPrompt = v.str
-	}
 	if v, ok := values["prompt_strategy"]; ok {
 		cfg.PromptStrategy = v.str
+	}
+	presetSet := false
+	if v, ok := values["prompt_preset"]; ok {
+		cfg.PromptPreset = v.str
+		presetSet = true
+	}
+	if presetSet {
+		prompt, err := LoadPromptPreset(cfg.PromptPreset)
+		if err != nil {
+			return cfg, err
+		}
+		cfg.SystemPrompt = prompt
+	}
+	if v, ok := values["system_prompt"]; ok {
+		cfg.SystemPrompt = v.str
 	}
 	for key, v := range values {
 		if !strings.HasPrefix(key, "engines.") {
@@ -101,6 +107,19 @@ func configPath() (string, error) {
 		return "", fmt.Errorf("resolve home dir: %w", err)
 	}
 	return filepath.Join(home, ".config", "git-ai-commit", "config.toml"), nil
+}
+
+func LoadPromptPreset(name string) (string, error) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" {
+		return "", fmt.Errorf("prompt preset is empty")
+	}
+	path := fmt.Sprintf("assets/%s.md", name)
+	data, err := promptFS.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("prompt preset %q not found", name)
+	}
+	return strings.TrimSpace(string(data)), nil
 }
 
 type tomlValue struct {

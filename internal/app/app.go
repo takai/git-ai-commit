@@ -11,7 +11,7 @@ import (
 	"git-ai-commit/internal/prompt"
 )
 
-func Run(context, contextFile, systemPrompt, promptStrategy, engineName string, amend, addAll bool, includeFiles []string) (err error) {
+func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engineName string, amend, addAll bool, includeFiles []string) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -55,6 +55,14 @@ func Run(context, contextFile, systemPrompt, promptStrategy, engineName string, 
 
 	if engineName != "" {
 		cfg.DefaultEngine = engineName
+	}
+
+	if promptPreset != "" {
+		prompt, err := config.LoadPromptPreset(promptPreset)
+		if err != nil {
+			return err
+		}
+		cfg.SystemPrompt = prompt
 	}
 
 	if systemPrompt != "" {

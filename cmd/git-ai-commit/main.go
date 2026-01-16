@@ -14,6 +14,7 @@ type options struct {
 	contextFile    string
 	systemPrompt   string
 	promptStrategy string
+	promptPreset   string
 	engine         string
 	amend          bool
 	addAll         bool
@@ -22,7 +23,7 @@ type options struct {
 
 func main() {
 	opts := parseFlags()
-	if err := app.Run(opts.context, opts.contextFile, opts.systemPrompt, opts.promptStrategy, opts.engine, opts.amend, opts.addAll, opts.includeFiles); err != nil {
+	if err := app.Run(opts.context, opts.contextFile, opts.systemPrompt, opts.promptStrategy, opts.promptPreset, opts.engine, opts.amend, opts.addAll, opts.includeFiles); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -34,6 +35,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.contextFile, "context-file", "", "Path to a file containing additional context")
 	flag.StringVar(&opts.systemPrompt, "system-prompt", "", "Override system prompt text")
 	flag.StringVar(&opts.promptStrategy, "prompt-strategy", "", "Prompt override strategy: replace, prepend, append")
+	flag.StringVar(&opts.promptPreset, "prompt-preset", "", "Select a bundled prompt preset (default, conventional, gitmoji, karma)")
 	flag.StringVar(&opts.engine, "engine", "", "LLM engine name override")
 	flag.BoolVar(&opts.amend, "amend", false, "Amend the previous commit")
 	flag.BoolVar(&opts.addAll, "all", false, "Stage modified and deleted files before generating the message")

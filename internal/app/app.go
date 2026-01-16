@@ -11,7 +11,7 @@ import (
 	"git-ai-commit/internal/prompt"
 )
 
-func Run(context, contextFile, systemPrompt, promptStrategy, engineName string, amend bool) error {
+func Run(context, contextFile, systemPrompt, promptStrategy, engineName string, amend, addAll bool, includeFiles []string) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -20,6 +20,19 @@ func Run(context, contextFile, systemPrompt, promptStrategy, engineName string, 
 	contextText, err := loadContext(context, contextFile)
 	if err != nil {
 		return err
+	}
+
+	var restoreIndex func()
+	if addAll || len(includeFiles) > 0 {
+		restoreIndex, err = stageChanges(addAll, includeFiles)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil && restoreIndex != nil {
+				restoreIndex()
+			}
+		}()
 	}
 
 	diff, err := git.StagedDiff()
@@ -120,4 +133,29 @@ func selectEngine(cfg config.Config) (engine.Engine, error) {
 		return engine.CLI{Command: spec.Command, Args: spec.Args}, nil
 	}
 	return engine.CLI{Command: name, Args: nil}, nil
+}
+
+func stageChanges(addAll bool, includeFiles []string) (func(), error) {
+	tree, err := git.WriteIndexTree()
+	if err != nil {
+		return nil, err
+	}
+	restore := func() {
+		_ = git.ReadIndexTree(tree)
+	}
+	if addAll {
+		if err := git.AddAll(); err != nil {
+			restore()
+			return nil, err
+		}
+		return restore, nil
+	}
+	if len(includeFiles) == 0 {
+		return restore, nil
+	}
+	if err := git.AddFiles(includeFiles); err != nil {
+		restore()
+		return nil, err
+	}
+	return restore, nil
 }

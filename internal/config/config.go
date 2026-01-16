@@ -20,7 +20,20 @@ type EngineConfig struct {
 	Args    []string
 }
 
-const defaultSystemPrompt = "Write a concise git commit message describing the staged changes."
+const defaultSystemPrompt = `Generate a single-line commit message following the Conventional Commits specification.
+
+Rules:
+- IMPORTANT: Output only the commit message
+- Format: type: short summary
+- One line only
+- Types allowed: feat, fix, docs, style, refactor, test, chore
+- English only
+- No trailing period
+- Summary under 72 characters
+- Do not wrap the message in quotes or backticks
+- Make sure with version bump if needed
+
+Write the commit message based on the following git diff:`
 
 func Default() Config {
 	return Config{

@@ -34,7 +34,7 @@ Common options:
 
 ## Configuration
 
-Example: use Codex with Conventional Commits by default:
+Example: Use Codex with Conventional Commits by default
 
 ```toml
 engine = "codex"
@@ -56,8 +56,6 @@ Supported settings:
 - `prompt_file` Path to a custom prompt file (relative to the config file)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
 
-Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.
-
 ### Engines
 
 Supported engines:
@@ -70,11 +68,13 @@ If no engine is configured, auto-detection tries commands in this order: `claude
 
 Any other engine name is treated as a direct command and executed with the prompt on stdin.
 
-Example: use a custom prompt file:
+Example: Use ollama with `gemma3:4b`
 
 ```toml
-engine = "claude"
-prompt_file = "prompts/commit.md"
+engine = "ollama"
+
+[engines.ollama]
+args = ["run", "gemma3:4b"]
 ```
 
 ### Prompt presets
@@ -85,3 +85,14 @@ Bundled presets live in `internal/config/assets/`:
 - `conventional` – [Conventional Commits](https://www.conventionalcommits.org/) format
 - `gitmoji` – [gitmoji](https://gitmoji.dev/)-based commit messages
 - `karma` – [Karma-style](https://karma-runner.github.io/6.4/dev/git-commit-msg.html) commit messages
+
+### Custom Prompts
+
+Example: Use a custom prompt file
+
+```toml
+engine = "claude"
+prompt_file = "prompts/commit.md"
+```
+
+Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.

@@ -113,3 +113,7 @@ prompt_file = "prompts/commit.md"
 ```
 
 Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.
+
+## Acknowledgements
+
+This tool was inspired by how [@negipo](https://github.com/negipo) used a tool like this in his workflow to make his work much more efficient.

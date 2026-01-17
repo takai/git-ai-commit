@@ -11,13 +11,15 @@ func TestLoadMissingConfig(t *testing.T) {
 	configHome := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 	t.Setenv("PATH", "")
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load error: %v", err)
-	}
-	if cfg.ResolvedPrompt == "" {
-		t.Fatalf("expected default resolved prompt")
-	}
+	withDir(t, t.TempDir(), func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.ResolvedPrompt == "" {
+			t.Fatalf("expected default resolved prompt")
+		}
+	})
 }
 
 func TestLoadConfigOverrides(t *testing.T) {
@@ -32,16 +34,18 @@ func TestLoadConfigOverrides(t *testing.T) {
 	if err := os.WriteFile(configPath, data, 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load error: %v", err)
-	}
-	if cfg.DefaultEngine != "codex" {
-		t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
-	}
-	if cfg.Prompt != "conventional" {
-		t.Fatalf("Prompt = %q", cfg.Prompt)
-	}
+	withDir(t, t.TempDir(), func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "codex" {
+			t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
+		}
+		if cfg.Prompt != "conventional" {
+			t.Fatalf("Prompt = %q", cfg.Prompt)
+		}
+	})
 }
 
 func TestLoadPromptPreset(t *testing.T) {
@@ -67,13 +71,15 @@ func TestAutodetectEngineOrder(t *testing.T) {
 	t.Setenv("PATH", binDir)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load error: %v", err)
-	}
-	if cfg.DefaultEngine != "claude" {
-		t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
-	}
+	withDir(t, t.TempDir(), func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "claude" {
+			t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
+		}
+	})
 }
 
 func makeExecutable(t *testing.T, dir, name string) {
@@ -107,6 +113,8 @@ func TestLoadRepoConfigOverrides(t *testing.T) {
 	if err := os.WriteFile(configPath, []byte("engine = 'gemini'\n"), 0o644); err != nil {
 		t.Fatalf("write xdg config: %v", err)
 	}
+
+	trustRepoConfig(t, repo, repoConfig)
 
 	withDir(t, repo, func() {
 		cfg, err := Load()
@@ -171,6 +179,8 @@ func TestConfigMerging(t *testing.T) {
 		t.Fatalf("write user config: %v", err)
 	}
 
+	trustRepoConfig(t, repo, repoConfig)
+
 	withDir(t, repo, func() {
 		cfg, err := Load()
 		if err != nil {
@@ -200,13 +210,15 @@ func TestPromptExclusivityError(t *testing.T) {
 	if err := os.WriteFile(configPath, data, 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
-	_, err := Load()
-	if err == nil {
-		t.Fatal("expected error for setting both prompt and prompt_file")
-	}
-	if !contains(err.Error(), "cannot set both") {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	withDir(t, t.TempDir(), func() {
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for setting both prompt and prompt_file")
+		}
+		if !contains(err.Error(), "cannot set both") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestPromptFileLoading(t *testing.T) {
@@ -230,13 +242,15 @@ func TestPromptFileLoading(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load error: %v", err)
-	}
-	if cfg.ResolvedPrompt != "Custom prompt content" {
-		t.Fatalf("ResolvedPrompt = %q, want 'Custom prompt content'", cfg.ResolvedPrompt)
-	}
+	withDir(t, t.TempDir(), func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.ResolvedPrompt != "Custom prompt content" {
+			t.Fatalf("ResolvedPrompt = %q, want 'Custom prompt content'", cfg.ResolvedPrompt)
+		}
+	})
 }
 
 func TestPromptFileMerging(t *testing.T) {
@@ -274,6 +288,8 @@ func TestPromptFileMerging(t *testing.T) {
 		t.Fatalf("write user config: %v", err)
 	}
 
+	trustRepoConfig(t, repo, repoConfig)
+
 	withDir(t, repo, func() {
 		cfg, err := Load()
 		if err != nil {
@@ -310,6 +326,111 @@ func TestValidateCLIPromptExclusivity(t *testing.T) {
 	}
 }
 
+func TestUntrustedRepoConfigNonInteractive(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("engine = 'codex'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	origStdin := os.Stdin
+	os.Stdin = r
+	defer func() {
+		os.Stdin = origStdin
+	}()
+
+	withDir(t, repo, func() {
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for untrusted repo config")
+		}
+	})
+}
+
+func TestRepoPromptFileOutsideRootRejected(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	secret := filepath.Join(base, "secret.md")
+	if err := os.WriteFile(secret, []byte("secret"), 0o644); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("prompt_file = '../secret.md'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	trustRepoConfig(t, repo, repoConfig)
+
+	withDir(t, repo, func() {
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for prompt_file outside repo root")
+		}
+	})
+}
+
+func TestRepoPromptFileSymlinkEscapeRejected(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	secret := filepath.Join(base, "secret.md")
+	if err := os.WriteFile(secret, []byte("secret"), 0o644); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	linkDir := filepath.Join(repo, "prompts")
+	if err := os.MkdirAll(linkDir, 0o755); err != nil {
+		t.Fatalf("mkdir prompts: %v", err)
+	}
+	linkPath := filepath.Join(linkDir, "escape.md")
+	if err := os.Symlink(secret, linkPath); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("prompt_file = 'prompts/escape.md'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	trustRepoConfig(t, repo, repoConfig)
+
+	withDir(t, repo, func() {
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for symlinked prompt_file outside repo root")
+		}
+	})
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
 }
@@ -321,4 +442,36 @@ func containsHelper(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func trustRepoConfig(t *testing.T, repoRoot, repoConfigPath string) {
+	t.Helper()
+	data, err := os.ReadFile(repoConfigPath)
+	if err != nil {
+		t.Fatalf("read repo config: %v", err)
+	}
+	rootReal, err := realPath(repoRoot)
+	if err != nil {
+		t.Fatalf("real path repo root: %v", err)
+	}
+	configReal, err := realPath(repoConfigPath)
+	if err != nil {
+		t.Fatalf("real path repo config: %v", err)
+	}
+	trustPath, err := trustedRepoListPath()
+	if err != nil {
+		t.Fatalf("trusted repo list path: %v", err)
+	}
+	list := trustedRepoList{
+		Entries: []trustedRepoEntry{
+			{
+				RepoRoot:   rootReal,
+				ConfigPath: configReal,
+				Hash:       computeHash(data),
+			},
+		},
+	}
+	if err := saveTrustedRepoList(trustPath, list); err != nil {
+		t.Fatalf("write trusted repo list: %v", err)
+	}
 }

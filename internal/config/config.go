@@ -59,8 +59,9 @@ func Default() Config {
 
 func Load() (Config, error) {
 	cfg := Default()
-	var promptSource string // tracks where the final prompt setting came from
+	var promptSource string   // tracks where the final prompt setting came from
 	var promptFilePath string // the path to the config file that set prompt_file
+	var promptFileRepoRoot string
 
 	// 1. Load user config
 	userPath, err := configPath()
@@ -82,12 +83,16 @@ func Load() (Config, error) {
 	}
 
 	// 2. Load repo config (merges on top of user config)
-	repoPath, err := repoConfigPath()
+	repoRoot, repoPath, err := repoConfigPath()
 	if err != nil {
 		return cfg, err
 	}
 	if repoPath != "" {
-		if data, err := os.ReadFile(repoPath); err == nil {
+		data, trusted, err := loadTrustedRepoConfig(repoRoot, repoPath)
+		if err != nil {
+			return cfg, err
+		}
+		if trusted {
 			var repoCfg rawConfig
 			if err := toml.Unmarshal(data, &repoCfg); err != nil {
 				return cfg, fmt.Errorf("parse repo config: %w", err)
@@ -104,12 +109,14 @@ func Load() (Config, error) {
 				cfg.PromptFile = ""
 				promptSource = "repo"
 				promptFilePath = ""
+				promptFileRepoRoot = ""
 			}
 			if repoCfg.PromptFile != "" {
 				cfg.PromptFile = repoCfg.PromptFile
 				cfg.Prompt = ""
 				promptSource = "repo"
 				promptFilePath = repoPath
+				promptFileRepoRoot = repoRoot
 			}
 			if repoCfg.Engines != nil {
 				if cfg.Engines == nil {
@@ -119,8 +126,6 @@ func Load() (Config, error) {
 					cfg.Engines[name] = ec
 				}
 			}
-		} else {
-			return cfg, fmt.Errorf("read repo config: %w", err)
 		}
 	}
 
@@ -137,7 +142,7 @@ func Load() (Config, error) {
 	}
 
 	// 5. Resolve prompt from preset or file
-	if err := resolvePrompt(&cfg, promptFilePath); err != nil {
+	if err := resolvePrompt(&cfg, promptFilePath, promptFileRepoRoot); err != nil {
 		return cfg, err
 	}
 	_ = promptSource // used for debugging if needed
@@ -183,7 +188,7 @@ func validatePromptExclusivity(prompt, promptFile, source string) error {
 	return nil
 }
 
-func resolvePrompt(cfg *Config, promptFilePath string) error {
+func resolvePrompt(cfg *Config, promptFilePath, promptFileRepoRoot string) error {
 	// If prompt_file is set, load from file (relative to config file's directory)
 	if strings.TrimSpace(cfg.PromptFile) != "" {
 		var basePath string
@@ -196,6 +201,18 @@ func resolvePrompt(cfg *Config, promptFilePath string) error {
 		fullPath := cfg.PromptFile
 		if !filepath.IsAbs(fullPath) {
 			fullPath = filepath.Join(basePath, cfg.PromptFile)
+		}
+		if promptFileRepoRoot != "" {
+			if filepath.IsAbs(cfg.PromptFile) {
+				return fmt.Errorf("prompt_file must be within repo root")
+			}
+			allowed, err := isPathWithinRoot(fullPath, promptFileRepoRoot)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				return fmt.Errorf("prompt_file must be within repo root")
+			}
 		}
 		data, err := os.ReadFile(fullPath)
 		if err != nil {
@@ -219,39 +236,36 @@ func resolvePrompt(cfg *Config, promptFilePath string) error {
 }
 
 func configPath() (string, error) {
-	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
-		return filepath.Join(dir, "git-ai-commit", "config.toml"), nil
-	}
-	home, err := os.UserHomeDir()
+	dir, err := configDir()
 	if err != nil {
-		return "", fmt.Errorf("resolve home dir: %w", err)
+		return "", err
 	}
-	return filepath.Join(home, ".config", "git-ai-commit", "config.toml"), nil
+	return filepath.Join(dir, "config.toml"), nil
 }
 
-func repoConfigPath() (string, error) {
+func repoConfigPath() (string, string, error) {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return "", nil
+		return "", "", nil
 	}
 	root := strings.TrimSpace(stdout.String())
 	if root == "" {
-		return "", nil
+		return "", "", nil
 	}
 	path := filepath.Join(root, ".git-ai-commit.toml")
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", nil
+			return "", "", nil
 		}
-		return "", fmt.Errorf("stat repo config: %w", err)
+		return "", "", fmt.Errorf("stat repo config: %w", err)
 	}
 	if info.IsDir() {
-		return "", fmt.Errorf("repo config is a directory: %s", path)
+		return "", "", fmt.Errorf("repo config is a directory: %s", path)
 	}
-	return path, nil
+	return root, path, nil
 }
 
 func LoadPromptPreset(name string) (string, error) {

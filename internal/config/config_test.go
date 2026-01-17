@@ -147,3 +147,45 @@ func runGit(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %v failed: %v (%s)", args, err, output)
 	}
 }
+
+func TestConfigMerging(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	// Repo config: only prompt_preset
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("prompt_preset = 'conventional'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	// User config: engine
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	configDir := filepath.Join(configHome, "git-ai-commit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte("engine = 'claude'\n"), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	withDir(t, repo, func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		// Engine from user config should be preserved
+		if cfg.DefaultEngine != "claude" {
+			t.Fatalf("DefaultEngine = %q, want 'claude'", cfg.DefaultEngine)
+		}
+		// PromptPreset from repo config should be applied
+		if cfg.PromptPreset != "conventional" {
+			t.Fatalf("PromptPreset = %q, want 'conventional'", cfg.PromptPreset)
+		}
+	})
+}

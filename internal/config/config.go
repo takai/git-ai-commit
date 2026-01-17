@@ -38,10 +38,9 @@ var DefaultEngineArgs = map[string][]string{
 }
 
 func Default() Config {
-	prompt, _ := LoadPromptPreset(defaultPromptPreset)
 	return Config{
 		DefaultEngine:  "",
-		SystemPrompt:   prompt,
+		SystemPrompt:   "",
 		PromptStrategy: "append",
 		PromptPreset:   defaultPromptPreset,
 		Engines:        map[string]EngineConfig{},
@@ -50,38 +49,60 @@ func Default() Config {
 
 func Load() (Config, error) {
 	cfg := Default()
-	if repoPath, err := repoConfigPath(); err != nil {
-		return cfg, err
-	} else if repoPath != "" {
-		return loadFromPath(cfg, repoPath)
-	}
-	path, err := configPath()
+
+	// 1. Load user config
+	userPath, err := configPath()
 	if err != nil {
 		return cfg, err
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if auto := autodetectEngine(); auto != "" {
-				cfg.DefaultEngine = auto
-			}
-			return cfg, nil
+	if data, err := os.ReadFile(userPath); err == nil {
+		if err := toml.Unmarshal(data, &cfg); err != nil {
+			return cfg, fmt.Errorf("parse user config: %w", err)
 		}
-		return cfg, fmt.Errorf("read config: %w", err)
+	} else if !os.IsNotExist(err) {
+		return cfg, fmt.Errorf("read user config: %w", err)
 	}
-	if err := toml.Unmarshal(data, &cfg); err != nil {
-		return cfg, fmt.Errorf("parse config: %w", err)
+
+	// 2. Load repo config (merges on top of user config)
+	repoPath, err := repoConfigPath()
+	if err != nil {
+		return cfg, err
 	}
+	if repoPath != "" {
+		if data, err := os.ReadFile(repoPath); err == nil {
+			if err := toml.Unmarshal(data, &cfg); err != nil {
+				return cfg, fmt.Errorf("parse repo config: %w", err)
+			}
+		} else {
+			return cfg, fmt.Errorf("read repo config: %w", err)
+		}
+	}
+
+	// 3. Auto-detect engine if still empty
+	if strings.TrimSpace(cfg.DefaultEngine) == "" {
+		if auto := autodetectEngine(); auto != "" {
+			cfg.DefaultEngine = auto
+		}
+	}
+
+	// 4. Ensure Engines map is initialized
 	if cfg.Engines == nil {
 		cfg.Engines = map[string]EngineConfig{}
 	}
-	if strings.TrimSpace(cfg.PromptPreset) != "" && strings.TrimSpace(cfg.SystemPrompt) == "" {
-		prompt, err := LoadPromptPreset(cfg.PromptPreset)
+
+	// 5. Load prompt from preset if not explicitly set
+	if strings.TrimSpace(cfg.SystemPrompt) == "" {
+		preset := cfg.PromptPreset
+		if strings.TrimSpace(preset) == "" {
+			preset = defaultPromptPreset
+		}
+		prompt, err := LoadPromptPreset(preset)
 		if err != nil {
 			return cfg, err
 		}
 		cfg.SystemPrompt = prompt
 	}
+
 	return cfg, nil
 }
 
@@ -119,27 +140,6 @@ func repoConfigPath() (string, error) {
 		return "", fmt.Errorf("repo config is a directory: %s", path)
 	}
 	return path, nil
-}
-
-func loadFromPath(cfg Config, path string) (Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return cfg, fmt.Errorf("read config: %w", err)
-	}
-	if err := toml.Unmarshal(data, &cfg); err != nil {
-		return cfg, fmt.Errorf("parse config: %w", err)
-	}
-	if cfg.Engines == nil {
-		cfg.Engines = map[string]EngineConfig{}
-	}
-	if strings.TrimSpace(cfg.PromptPreset) != "" && strings.TrimSpace(cfg.SystemPrompt) == "" {
-		prompt, err := LoadPromptPreset(cfg.PromptPreset)
-		if err != nil {
-			return cfg, err
-		}
-		cfg.SystemPrompt = prompt
-	}
-	return cfg, nil
 }
 
 func LoadPromptPreset(name string) (string, error) {

@@ -35,7 +35,11 @@ Common options:
 
 ## Configuration
 
-Config file: `~/.config/git-ai-commit/config.toml`
+Config file (repo-local): `.git-ai-commit.toml` at the repository root
+
+Fallback config: `~/.config/git-ai-commit/config.toml`
+
+If the repo-local file exists, it takes precedence over the fallback config.
 
 Supported settings:
 

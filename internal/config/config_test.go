@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -83,5 +84,66 @@ func makeExecutable(t *testing.T, dir, name string) {
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatalf("write executable: %v", err)
+	}
+}
+
+func TestLoadRepoConfigOverrides(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("engine = 'codex'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	configDir := filepath.Join(configHome, "git-ai-commit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte("engine = 'gemini'\n"), 0o644); err != nil {
+		t.Fatalf("write xdg config: %v", err)
+	}
+
+	withDir(t, repo, func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "codex" {
+			t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
+		}
+	})
+}
+
+func withDir(t *testing.T, dir string, fn func()) {
+	t.Helper()
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(cwd); err != nil {
+			t.Fatalf("restore cwd: %v", err)
+		}
+	}()
+	fn()
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v failed: %v (%s)", args, err, output)
 	}
 }

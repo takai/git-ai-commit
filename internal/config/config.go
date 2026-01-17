@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"os"
@@ -42,6 +43,11 @@ func Default() Config {
 
 func Load() (Config, error) {
 	cfg := Default()
+	if repoPath, err := repoConfigPath(); err != nil {
+		return cfg, err
+	} else if repoPath != "" {
+		return loadFromPath(cfg, repoPath)
+	}
 	path, err := configPath()
 	if err != nil {
 		return cfg, err
@@ -81,6 +87,52 @@ func configPath() (string, error) {
 		return "", fmt.Errorf("resolve home dir: %w", err)
 	}
 	return filepath.Join(home, ".config", "git-ai-commit", "config.toml"), nil
+}
+
+func repoConfigPath() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return "", nil
+	}
+	root := strings.TrimSpace(stdout.String())
+	if root == "" {
+		return "", nil
+	}
+	path := filepath.Join(root, ".git-ai-commit.toml")
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("stat repo config: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("repo config is a directory: %s", path)
+	}
+	return path, nil
+}
+
+func loadFromPath(cfg Config, path string) (Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return cfg, fmt.Errorf("read config: %w", err)
+	}
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return cfg, fmt.Errorf("parse config: %w", err)
+	}
+	if cfg.Engines == nil {
+		cfg.Engines = map[string]EngineConfig{}
+	}
+	if strings.TrimSpace(cfg.PromptPreset) != "" && strings.TrimSpace(cfg.SystemPrompt) == "" {
+		prompt, err := LoadPromptPreset(cfg.PromptPreset)
+		if err != nil {
+			return cfg, err
+		}
+		cfg.SystemPrompt = prompt
+	}
+	return cfg, nil
 }
 
 func LoadPromptPreset(name string) (string, error) {

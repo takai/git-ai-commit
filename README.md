@@ -1,6 +1,6 @@
 # git-ai-commit
 
-AI-assisted Git commit messages from staged diffs.
+Generate Git commit messages from staged diffs using your preferred LLM CLI.
 
 ## Install
 
@@ -34,13 +34,20 @@ Common options:
 
 ## Configuration
 
-Settings are loaded in order (later overrides earlier):
+Example: use Codex with Conventional Commits by default:
+
+```toml
+engine = "codex"
+prompt = "conventional"
+```
+
+Configuration is layered, allowing global defaults with per-repository overrides:
 
 1. User config: `~/.config/git-ai-commit/config.toml`
 2. Repo config: `.git-ai-commit.toml` at the repository root
 3. Command-line flags
 
-This lets you set your preferred engine in user config and override just the prompt preset per repository.
+This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules.
 
 Supported settings:
 
@@ -51,97 +58,30 @@ Supported settings:
 
 Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.
 
-Supported engine names (by convention):
+### Engines
+
+Supported engines:
 
 - `claude`
-- `codex`
-- `cursor-agent`
 - `gemini`
+- `codex`
 
 If no engine is configured, auto-detection tries commands in this order: `claude` → `gemini` → `codex`. The first available command is used.
 
-Any engine name not listed above is treated as a direct command. For example, `engine = "my-llm-cli"` will execute `my-llm-cli` with the prompt on stdin.
+Any other engine name is treated as a direct command and executed with the prompt on stdin.
 
-Example:
-
-```toml
-engine = "codex"
-prompt = "conventional"
-
-[engines.codex]
-args = ["exec", "--model", "gpt-5-mini"]
-```
-
-Using a custom prompt file:
+Example: use a custom prompt file:
 
 ```toml
 engine = "claude"
 prompt_file = "prompts/commit.md"
 ```
 
-### Engine examples
-
-By default, the prompt is sent via stdin. For CLIs that require the prompt as an argument, use `{{prompt}}` as a placeholder in the args list.
-
-Claude:
-
-```toml
-engine = "claude"
-
-[engines.claude]
-args = ["-p", "--model", "haiku"]
-```
-
-Codex:
-
-```toml
-engine = "codex"
-
-[engines.codex]
-args = ["exec", "--model", "gpt-5-mini"]
-```
-
-Cursor agent:
-
-```toml
-engine = "cursor-agent"
-
-[engines.cursor-agent]
-args = ["-p"]
-```
-
-Gemini:
-
-```toml
-engine = "gemini"
-
-[engines.gemini]
-args = ["-m", "gemini-2.5-flash", "-p", "{{prompt}}"]
-```
-
-## Prompt presets
+### Prompt presets
 
 Bundled presets live in `internal/config/assets/`:
 
-- `default`
-- `conventional`
-- `gitmoji`
-- `karma`
-
-## Safety
-
-- No commit if there is no staged diff
-- No commit if `--amend` is set and there is no previous commit
-- No commit on engine failure or empty output
-- Git state is not modified on errors
-
-## Release acceptance check
-
-For manual, pre-release verification across engines and prompt presets:
-
-```sh
-./scripts/release-check.sh
-```
-
-The script writes a report under `tmp/acceptance-<timestamp>/` with a
-`summary.md` checklist for human review.
+- `default` – Commit messages aligned with the recommendations in [Pro Git](https://git-scm.com/book/ms/v2/Distributed-Git-Contributing-to-a-Project)
+- `conventional` – [Conventional Commits](https://www.conventionalcommits.org/) format
+- `gitmoji` – [gitmoji](https://gitmoji.dev/)-based commit messages
+- `karma` – [Karma-style](https://karma-runner.github.io/6.4/dev/git-commit-msg.html) commit messages

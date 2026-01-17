@@ -35,11 +35,13 @@ Common options:
 
 ## Configuration
 
-Config file (repo-local): `.git-ai-commit.toml` at the repository root
+Settings are loaded in order (later overrides earlier):
 
-Fallback config: `~/.config/git-ai-commit/config.toml`
+1. User config: `~/.config/git-ai-commit/config.toml`
+2. Repo config: `.git-ai-commit.toml` at the repository root
+3. Command-line flags
 
-If the repo-local file exists, it takes precedence over the fallback config.
+This lets you set your preferred engine in user config and override just the prompt preset per repository.
 
 Supported settings:
 

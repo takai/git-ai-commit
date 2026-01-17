@@ -49,22 +49,20 @@ Common options:
 
 ## Configuration
 
-Example: Use Codex with Conventional Commits by default
-
-```toml
-engine = "codex"
-prompt = "conventional"
-```
-
 Configuration is layered, allowing global defaults with per-repository overrides:
 
 1. User config: `~/.config/git-ai-commit/config.toml`
 2. Repo config: `.git-ai-commit.toml` at the repository root
 3. Command-line flags
 
-This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules.
+This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules. Repository config is applied only after an initial trust prompt.
 
-Note: Repository config is used only after an initial trust prompt.
+Example: Use Codex with Conventional Commits by default
+
+```toml
+engine = "codex"
+prompt = "conventional"
+```
 
 Supported settings:
 

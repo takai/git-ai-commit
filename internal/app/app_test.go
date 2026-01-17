@@ -1,6 +1,10 @@
 package app
 
-import "testing"
+import (
+	"testing"
+
+	"git-ai-commit/internal/config"
+)
 
 func TestApplyPromptStrategy(t *testing.T) {
 	base := "base"
@@ -33,5 +37,19 @@ func TestApplyPromptStrategy(t *testing.T) {
 	_, err = applyPromptStrategy(base, override, "unknown")
 	if err == nil {
 		t.Fatalf("expected error for unknown strategy")
+	}
+}
+
+func TestSelectEngineCodexDefault(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "codex"
+	cfg.Engines = map[string]config.EngineConfig{}
+
+	_, command, err := selectEngine(cfg)
+	if err != nil {
+		t.Fatalf("selectEngine error: %v", err)
+	}
+	if command != "codex exec" {
+		t.Fatalf("command = %q", command)
 	}
 }

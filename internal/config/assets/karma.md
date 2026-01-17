@@ -36,6 +36,7 @@ Rules:
   - The subject must describe the change, not the migration steps
 
 - Do not reference the diff, file names, or line numbers directly
+- Do not wrap the message in backticks or code fences
 - Output only the commit message, without any explanations or metadata
 
 Write the commit message based on the following git diff:

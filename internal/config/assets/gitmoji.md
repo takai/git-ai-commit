@@ -27,6 +27,7 @@ Rules:
 - Do not include Conventional Commits types (feat, fix, etc.)
 - Do not mix multiple conventions in a single commit
 - Do not mention the diff, file names, or line numbers explicitly
+- Do not wrap the message in backticks or code fences
 - Output only the commit message, with no explanations or metadata
 
 Write the commit message based on the following git diff:

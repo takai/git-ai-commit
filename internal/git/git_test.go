@@ -19,6 +19,22 @@ func TestStagedDiffEmpty(t *testing.T) {
 	})
 }
 
+func TestLastCommitDiff(t *testing.T) {
+	repo := setupRepo(t)
+	withRepo(t, repo, func() {
+		writeFile(t, repo, "file.txt", "hello")
+		runGit(t, repo, "add", "file.txt")
+		runGit(t, repo, "commit", "-m", "initial")
+
+		diff, err := LastCommitDiff()
+		if err != nil {
+			t.Fatalf("LastCommitDiff error: %v", err)
+		}
+		if diff == "" {
+			t.Fatalf("expected last commit diff")
+		}
+	})
+}
 func TestHasHeadCommitFalse(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {

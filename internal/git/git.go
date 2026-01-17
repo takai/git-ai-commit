@@ -19,6 +19,18 @@ func StagedDiff() (string, error) {
 	return stdout.String(), nil
 }
 
+func LastCommitDiff() (string, error) {
+	cmd := exec.Command("git", "show", "HEAD", "--format=", "--no-color")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("git show failed: %v: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	return stdout.String(), nil
+}
+
 func AddAll() error {
 	cmd := exec.Command("git", "add", "-u")
 	var stderr bytes.Buffer

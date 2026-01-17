@@ -35,14 +35,6 @@ func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engin
 		}()
 	}
 
-	diff, err := git.StagedDiff()
-	if err != nil {
-		return err
-	}
-	if strings.TrimSpace(diff) == "" {
-		return fmt.Errorf("no staged changes to commit")
-	}
-
 	if amend {
 		hasHead, err := git.HasHeadCommit()
 		if err != nil {
@@ -51,6 +43,17 @@ func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engin
 		if !hasHead {
 			return fmt.Errorf("cannot amend without an existing commit")
 		}
+	}
+
+	diff, err := commitDiff(amend)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(diff) == "" {
+		if amend {
+			return fmt.Errorf("no changes found in the last commit")
+		}
+		return fmt.Errorf("no staged changes to commit")
 	}
 
 	if engineName != "" {
@@ -157,6 +160,13 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 		return engine.CLI{Command: "cursor-agent", Args: []string{"-p"}}, "cursor-agent -p", nil
 	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
+}
+
+func commitDiff(amend bool) (string, error) {
+	if amend {
+		return git.LastCommitDiff()
+	}
+	return git.StagedDiff()
 }
 
 func stageChanges(addAll bool, includeFiles []string) (func(), error) {

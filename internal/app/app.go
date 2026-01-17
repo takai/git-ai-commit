@@ -147,8 +147,8 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	if name == "" {
 		return nil, "", fmt.Errorf("no engine configured")
 	}
-	if spec, ok := cfg.Engines[name]; ok && spec.Command != "" {
-		return engine.CLI{Command: spec.Command, Args: spec.Args}, strings.Join(append([]string{spec.Command}, spec.Args...), " "), nil
+	if spec, ok := cfg.Engines[name]; ok {
+		return engine.CLI{Command: name, Args: spec.Args}, strings.Join(append([]string{name}, spec.Args...), " "), nil
 	}
 	if name == "codex" {
 		return engine.CLI{Command: "codex", Args: []string{"exec"}}, "codex exec", nil

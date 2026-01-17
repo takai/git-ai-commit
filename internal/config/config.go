@@ -21,8 +21,7 @@ type Config struct {
 }
 
 type EngineConfig struct {
-	Command string   `toml:"command"`
-	Args    []string `toml:"args"`
+	Args []string `toml:"args"`
 }
 
 //go:embed assets/*.md

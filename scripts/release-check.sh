@@ -41,7 +41,6 @@ for engine in $ENGINES; do
 engine = "claude"
 
 [engines.claude]
-command = "claude"
 args = ["-p", "--model", "haiku"]
 EOC
         ;;
@@ -50,7 +49,6 @@ EOC
 engine = "gemini"
 
 [engines.gemini]
-command = "gemini"
 args = ["-m", "gemini-2.5-flash", "-p", "{{prompt}}"]
 EOC
         ;;
@@ -59,7 +57,6 @@ EOC
 engine = "codex"
 
 [engines.codex]
-command = "codex"
 args = ["exec", "--model", "gpt-5.1-codex-mini"]
 EOC
         ;;

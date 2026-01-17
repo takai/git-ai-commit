@@ -96,6 +96,22 @@ func TestSelectEngineGeminiDefault(t *testing.T) {
 	}
 }
 
+func TestSelectEngineCustomArgs(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "claude"
+	cfg.Engines = map[string]config.EngineConfig{
+		"claude": {Args: []string{"-p", "--model", "sonnet"}},
+	}
+
+	_, command, err := selectEngine(cfg)
+	if err != nil {
+		t.Fatalf("selectEngine error: %v", err)
+	}
+	if command != "claude -p --model sonnet" {
+		t.Fatalf("command = %q", command)
+	}
+}
+
 func TestSanitizeMessageCodeFence(t *testing.T) {
 	input := "```\nfeat: add thing\n```"
 	got := sanitizeMessage(input)

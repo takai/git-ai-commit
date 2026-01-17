@@ -42,6 +42,5 @@
   prompt_preset = "default"
 
   [engines.codex]
-  command = "codex"
   args = ["exec", "--model", "gpt-5-mini"]
   ```

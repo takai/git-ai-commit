@@ -47,7 +47,6 @@ Supported settings:
 - `system_prompt` Override the system prompt text (string)
 - `prompt_strategy` How to merge `system_prompt` with default: `replace`, `prepend`, `append` (requires `system_prompt` to be set)
 - `prompt_preset` Use a bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
-- `engines.<name>.command` Command to execute for an engine (string)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
 
 Supported engine names (by convention):
@@ -68,7 +67,6 @@ engine = "codex"
 prompt_preset = "default"
 
 [engines.codex]
-command = "codex"
 args = ["exec", "--model", "gpt-5-mini"]
 ```
 
@@ -82,7 +80,6 @@ Claude:
 engine = "claude"
 
 [engines.claude]
-command = "claude"
 args = ["-p", "--model", "haiku"]
 ```
 
@@ -92,7 +89,6 @@ Codex:
 engine = "codex"
 
 [engines.codex]
-command = "codex"
 args = ["exec", "--model", "gpt-5-mini"]
 ```
 
@@ -102,7 +98,6 @@ Cursor agent:
 engine = "cursor-agent"
 
 [engines.cursor-agent]
-command = "cursor-agent"
 args = ["-p"]
 ```
 
@@ -112,7 +107,6 @@ Gemini:
 engine = "gemini"
 
 [engines.gemini]
-command = "gemini"
 args = ["-m", "gemini-2.5-flash", "-p", "{{prompt}}"]
 ```
 

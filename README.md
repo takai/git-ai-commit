@@ -48,6 +48,7 @@ Configuration is layered, allowing global defaults with per-repository overrides
 3. Command-line flags
 
 This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules.
+
 Note: Repository config is used only after an initial trust prompt.
 
 Supported settings:

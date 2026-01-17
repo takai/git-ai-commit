@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -48,6 +49,9 @@ func Load() (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if auto := autodetectEngine(); auto != "" {
+				cfg.DefaultEngine = auto
+			}
 			return cfg, nil
 		}
 		return cfg, fmt.Errorf("read config: %w", err)
@@ -90,4 +94,14 @@ func LoadPromptPreset(name string) (string, error) {
 		return "", fmt.Errorf("prompt preset %q not found", name)
 	}
 	return strings.TrimSpace(string(data)), nil
+}
+
+func autodetectEngine() string {
+	candidates := []string{"claude", "gemini", "codex"}
+	for _, name := range candidates {
+		if _, err := exec.LookPath(name); err == nil {
+			return name
+		}
+	}
+	return ""
 }

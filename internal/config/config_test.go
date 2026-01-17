@@ -9,6 +9,7 @@ import (
 func TestLoadMissingConfig(t *testing.T) {
 	configHome := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("PATH", "")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load error: %v", err)
@@ -52,5 +53,35 @@ func TestLoadPromptPreset(t *testing.T) {
 	}
 	if prompt == "" {
 		t.Fatalf("expected prompt content")
+	}
+}
+
+func TestAutodetectEngineOrder(t *testing.T) {
+	configHome := t.TempDir()
+	binDir := filepath.Join(configHome, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	makeExecutable(t, binDir, "codex")
+	makeExecutable(t, binDir, "gemini")
+	makeExecutable(t, binDir, "claude")
+
+	t.Setenv("PATH", binDir)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+	if cfg.DefaultEngine != "claude" {
+		t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
+	}
+}
+
+func makeExecutable(t *testing.T, dir, name string) {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write executable: %v", err)
 	}
 }

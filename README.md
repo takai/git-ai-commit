@@ -22,9 +22,8 @@ Common options:
 
 - `--context VALUE` Additional context for the commit message
 - `--context-file VALUE` File containing additional context
-- `--system-prompt VALUE` Override system prompt text
-- `--prompt-strategy VALUE` `replace`, `prepend`, or `append`
-- `--prompt-preset VALUE` `default`, `conventional`, `gitmoji`, `karma`
+- `--prompt VALUE` Bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
+- `--prompt-file VALUE` Path to a custom prompt file
 - `--engine VALUE` Override engine name
 - `--amend` Amend the previous commit
 - `-a`, `--all` Stage modified and deleted files before generating the message
@@ -46,10 +45,11 @@ This lets you set your preferred engine in user config and override just the pro
 Supported settings:
 
 - `engine` Default engine name (string)
-- `system_prompt` Override the system prompt text (string)
-- `prompt_strategy` How to merge `system_prompt` with default: `replace`, `prepend`, `append` (requires `system_prompt` to be set)
-- `prompt_preset` Use a bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
+- `prompt` Bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
+- `prompt_file` Path to a custom prompt file (relative to the config file)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
+
+Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.
 
 Supported engine names (by convention):
 
@@ -66,10 +66,17 @@ Example:
 
 ```toml
 engine = "codex"
-prompt_preset = "default"
+prompt = "conventional"
 
 [engines.codex]
 args = ["exec", "--model", "gpt-5-mini"]
+```
+
+Using a custom prompt file:
+
+```toml
+engine = "claude"
+prompt_file = "prompts/commit.md"
 ```
 
 ### Engine examples

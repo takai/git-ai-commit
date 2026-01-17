@@ -10,17 +10,16 @@ import (
 )
 
 type options struct {
-	context        string
-	contextFile    string
-	systemPrompt   string
-	promptStrategy string
-	promptPreset   string
-	engine         string
-	amend          bool
-	addAll         bool
-	includeFiles   []string
-	debugPrompt    bool
-	debugCommand   bool
+	context      string
+	contextFile  string
+	prompt       string
+	promptFile   string
+	engine       string
+	amend        bool
+	addAll       bool
+	includeFiles []string
+	debugPrompt  bool
+	debugCommand bool
 }
 
 func main() {
@@ -37,9 +36,8 @@ func main() {
 	if err := app.Run(
 		opts.context,
 		opts.contextFile,
-		opts.systemPrompt,
-		opts.promptStrategy,
-		opts.promptPreset,
+		opts.prompt,
+		opts.promptFile,
 		opts.engine,
 		opts.amend,
 		opts.addAll,
@@ -66,7 +64,7 @@ func parseArgs(args []string) (options, error) {
 			switch name {
 			case "help":
 				return opts, errHelp
-			case "context", "context-file", "system-prompt", "prompt-strategy", "prompt-preset", "engine", "include":
+			case "context", "context-file", "prompt", "prompt-file", "engine", "include":
 				if !hasValue {
 					if i+1 >= len(args) {
 						return opts, fmt.Errorf("missing value for --%s", name)
@@ -98,6 +96,10 @@ func parseArgs(args []string) (options, error) {
 		}
 		return opts, fmt.Errorf("unexpected argument %q", arg)
 	}
+	// Validate mutual exclusivity of --prompt and --prompt-file
+	if opts.prompt != "" && opts.promptFile != "" {
+		return opts, fmt.Errorf("cannot use both --prompt and --prompt-file")
+	}
 	return opts, nil
 }
 
@@ -107,12 +109,10 @@ func applyLongOption(opts *options, name, value string) error {
 		opts.context = value
 	case "context-file":
 		opts.contextFile = value
-	case "system-prompt":
-		opts.systemPrompt = value
-	case "prompt-strategy":
-		opts.promptStrategy = value
-	case "prompt-preset":
-		opts.promptPreset = value
+	case "prompt":
+		opts.prompt = value
+	case "prompt-file":
+		opts.promptFile = value
 	case "engine":
 		opts.engine = value
 	case "include":
@@ -171,9 +171,8 @@ func printUsage(out *os.File) {
 	fmt.Fprintln(out, "Options:")
 	fmt.Fprintln(out, "  --context VALUE           Additional context for the commit message")
 	fmt.Fprintln(out, "  --context-file VALUE      Path to a file containing additional context")
-	fmt.Fprintln(out, "  --system-prompt VALUE     Override system prompt text")
-	fmt.Fprintln(out, "  --prompt-strategy VALUE   Prompt override strategy: replace, prepend, append")
-	fmt.Fprintln(out, "  --prompt-preset VALUE     Bundled prompt preset: default, conventional, gitmoji, karma")
+	fmt.Fprintln(out, "  --prompt VALUE            Bundled prompt preset: default, conventional, gitmoji, karma")
+	fmt.Fprintln(out, "  --prompt-file VALUE       Path to a custom prompt file")
 	fmt.Fprintln(out, "  --engine VALUE            LLM engine name override")
 	fmt.Fprintln(out, "  --amend                   Amend the previous commit")
 	fmt.Fprintln(out, "  -a, --all                 Stage modified and deleted files before generating the message")

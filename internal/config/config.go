@@ -13,11 +13,22 @@ import (
 )
 
 type Config struct {
-	DefaultEngine  string                  `toml:"engine"`
-	SystemPrompt   string                  `toml:"system_prompt"`
-	PromptStrategy string                  `toml:"prompt_strategy"`
-	PromptPreset   string                  `toml:"prompt_preset"`
-	Engines        map[string]EngineConfig `toml:"engines"`
+	DefaultEngine string                  `toml:"engine"`
+	Prompt        string                  `toml:"prompt"`
+	PromptFile    string                  `toml:"prompt_file"`
+	Engines       map[string]EngineConfig `toml:"engines"`
+
+	// ResolvedPrompt holds the final prompt text after loading from preset or file.
+	// This is not read from config files directly.
+	ResolvedPrompt string `toml:"-"`
+}
+
+// rawConfig is the TOML structure used to detect mutual exclusivity in a single layer.
+type rawConfig struct {
+	DefaultEngine string                  `toml:"engine"`
+	Prompt        string                  `toml:"prompt"`
+	PromptFile    string                  `toml:"prompt_file"`
+	Engines       map[string]EngineConfig `toml:"engines"`
 }
 
 type EngineConfig struct {
@@ -39,16 +50,17 @@ var DefaultEngineArgs = map[string][]string{
 
 func Default() Config {
 	return Config{
-		DefaultEngine:  "",
-		SystemPrompt:   "",
-		PromptStrategy: "append",
-		PromptPreset:   defaultPromptPreset,
-		Engines:        map[string]EngineConfig{},
+		DefaultEngine: "",
+		Prompt:        "",
+		PromptFile:    "",
+		Engines:       map[string]EngineConfig{},
 	}
 }
 
 func Load() (Config, error) {
 	cfg := Default()
+	var promptSource string // tracks where the final prompt setting came from
+	var promptFilePath string // the path to the config file that set prompt_file
 
 	// 1. Load user config
 	userPath, err := configPath()
@@ -56,8 +68,14 @@ func Load() (Config, error) {
 		return cfg, err
 	}
 	if data, err := os.ReadFile(userPath); err == nil {
-		if err := toml.Unmarshal(data, &cfg); err != nil {
-			return cfg, fmt.Errorf("parse user config: %w", err)
+		if err := loadConfigLayer(data, &cfg, "user config"); err != nil {
+			return cfg, err
+		}
+		if cfg.PromptFile != "" {
+			promptSource = "user"
+			promptFilePath = userPath
+		} else if cfg.Prompt != "" {
+			promptSource = "user"
 		}
 	} else if !os.IsNotExist(err) {
 		return cfg, fmt.Errorf("read user config: %w", err)
@@ -70,8 +88,36 @@ func Load() (Config, error) {
 	}
 	if repoPath != "" {
 		if data, err := os.ReadFile(repoPath); err == nil {
-			if err := toml.Unmarshal(data, &cfg); err != nil {
+			var repoCfg rawConfig
+			if err := toml.Unmarshal(data, &repoCfg); err != nil {
 				return cfg, fmt.Errorf("parse repo config: %w", err)
+			}
+			if err := validatePromptExclusivity(repoCfg.Prompt, repoCfg.PromptFile, "repo config"); err != nil {
+				return cfg, err
+			}
+			// Merge repo config into cfg
+			if repoCfg.DefaultEngine != "" {
+				cfg.DefaultEngine = repoCfg.DefaultEngine
+			}
+			if repoCfg.Prompt != "" {
+				cfg.Prompt = repoCfg.Prompt
+				cfg.PromptFile = ""
+				promptSource = "repo"
+				promptFilePath = ""
+			}
+			if repoCfg.PromptFile != "" {
+				cfg.PromptFile = repoCfg.PromptFile
+				cfg.Prompt = ""
+				promptSource = "repo"
+				promptFilePath = repoPath
+			}
+			if repoCfg.Engines != nil {
+				if cfg.Engines == nil {
+					cfg.Engines = map[string]EngineConfig{}
+				}
+				for name, ec := range repoCfg.Engines {
+					cfg.Engines[name] = ec
+				}
 			}
 		} else {
 			return cfg, fmt.Errorf("read repo config: %w", err)
@@ -90,20 +136,86 @@ func Load() (Config, error) {
 		cfg.Engines = map[string]EngineConfig{}
 	}
 
-	// 5. Load prompt from preset if not explicitly set
-	if strings.TrimSpace(cfg.SystemPrompt) == "" {
-		preset := cfg.PromptPreset
-		if strings.TrimSpace(preset) == "" {
-			preset = defaultPromptPreset
-		}
-		prompt, err := LoadPromptPreset(preset)
-		if err != nil {
-			return cfg, err
-		}
-		cfg.SystemPrompt = prompt
+	// 5. Resolve prompt from preset or file
+	if err := resolvePrompt(&cfg, promptFilePath); err != nil {
+		return cfg, err
 	}
+	_ = promptSource // used for debugging if needed
 
 	return cfg, nil
+}
+
+func loadConfigLayer(data []byte, cfg *Config, source string) error {
+	var raw rawConfig
+	if err := toml.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("parse %s: %w", source, err)
+	}
+	if err := validatePromptExclusivity(raw.Prompt, raw.PromptFile, source); err != nil {
+		return err
+	}
+	// Merge into cfg
+	if raw.DefaultEngine != "" {
+		cfg.DefaultEngine = raw.DefaultEngine
+	}
+	if raw.Prompt != "" {
+		cfg.Prompt = raw.Prompt
+		cfg.PromptFile = ""
+	}
+	if raw.PromptFile != "" {
+		cfg.PromptFile = raw.PromptFile
+		cfg.Prompt = ""
+	}
+	if raw.Engines != nil {
+		if cfg.Engines == nil {
+			cfg.Engines = map[string]EngineConfig{}
+		}
+		for name, ec := range raw.Engines {
+			cfg.Engines[name] = ec
+		}
+	}
+	return nil
+}
+
+func validatePromptExclusivity(prompt, promptFile, source string) error {
+	if strings.TrimSpace(prompt) != "" && strings.TrimSpace(promptFile) != "" {
+		return fmt.Errorf("%s: cannot set both 'prompt' and 'prompt_file'", source)
+	}
+	return nil
+}
+
+func resolvePrompt(cfg *Config, promptFilePath string) error {
+	// If prompt_file is set, load from file (relative to config file's directory)
+	if strings.TrimSpace(cfg.PromptFile) != "" {
+		var basePath string
+		if promptFilePath != "" {
+			basePath = filepath.Dir(promptFilePath)
+		} else {
+			// Fallback to current directory
+			basePath = "."
+		}
+		fullPath := cfg.PromptFile
+		if !filepath.IsAbs(fullPath) {
+			fullPath = filepath.Join(basePath, cfg.PromptFile)
+		}
+		data, err := os.ReadFile(fullPath)
+		if err != nil {
+			return fmt.Errorf("read prompt file %q: %w", fullPath, err)
+		}
+		cfg.ResolvedPrompt = strings.TrimSpace(string(data))
+		return nil
+	}
+
+	// If prompt preset is set, load from embedded assets
+	preset := cfg.Prompt
+	if strings.TrimSpace(preset) == "" {
+		preset = defaultPromptPreset
+	}
+	promptText, err := LoadPromptPreset(preset)
+	if err != nil {
+		return err
+	}
+	cfg.ResolvedPrompt = promptText
+	return nil
 }
 
 func configPath() (string, error) {
@@ -163,4 +275,44 @@ func autodetectEngine() string {
 		}
 	}
 	return ""
+}
+
+// ApplyCLIPrompt applies CLI-level prompt or prompt_file overrides.
+// Both prompt and promptFile should not be set at the same time (caller must validate).
+// If promptFile is set, it is resolved relative to the current working directory.
+func ApplyCLIPrompt(cfg *Config, prompt, promptFile string) error {
+	if strings.TrimSpace(prompt) != "" {
+		cfg.Prompt = prompt
+		cfg.PromptFile = ""
+		promptText, err := LoadPromptPreset(prompt)
+		if err != nil {
+			return err
+		}
+		cfg.ResolvedPrompt = promptText
+		return nil
+	}
+	if strings.TrimSpace(promptFile) != "" {
+		cfg.PromptFile = promptFile
+		cfg.Prompt = ""
+		fullPath := promptFile
+		if !filepath.IsAbs(fullPath) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("get working directory: %w", err)
+			}
+			fullPath = filepath.Join(cwd, promptFile)
+		}
+		data, err := os.ReadFile(fullPath)
+		if err != nil {
+			return fmt.Errorf("read prompt file %q: %w", fullPath, err)
+		}
+		cfg.ResolvedPrompt = strings.TrimSpace(string(data))
+		return nil
+	}
+	return nil
+}
+
+// ValidateCLIPromptExclusivity checks that prompt and prompt_file are not both set at CLI level.
+func ValidateCLIPromptExclusivity(prompt, promptFile string) error {
+	return validatePromptExclusivity(prompt, promptFile, "CLI")
 }

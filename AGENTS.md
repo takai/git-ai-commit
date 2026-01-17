@@ -39,7 +39,7 @@
 - Example engine config:
   ```toml
   engine = "codex"
-  prompt_preset = "default"
+  prompt = "default"
 
   [engines.codex]
   args = ["exec", "--model", "gpt-5-mini"]

@@ -11,7 +11,7 @@ import (
 	"git-ai-commit/internal/prompt"
 )
 
-func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engineName string, amend, addAll bool, includeFiles []string, debugPrompt, debugCommand bool) (err error) {
+func Run(context, contextFile, promptName, promptFile, engineName string, amend, addAll bool, includeFiles []string, debugPrompt, debugCommand bool) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -60,29 +60,12 @@ func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engin
 		cfg.DefaultEngine = engineName
 	}
 
-	if promptPreset != "" {
-		prompt, err := config.LoadPromptPreset(promptPreset)
-		if err != nil {
-			return err
-		}
-		cfg.SystemPrompt = prompt
+	// Apply CLI prompt overrides
+	if err := config.ApplyCLIPrompt(&cfg, promptName, promptFile); err != nil {
+		return err
 	}
 
-	if systemPrompt != "" {
-		strategy := cfg.PromptStrategy
-		if promptStrategy != "" {
-			strategy = promptStrategy
-		}
-		combined, err := applyPromptStrategy(cfg.SystemPrompt, systemPrompt, strategy)
-		if err != nil {
-			return err
-		}
-		cfg.SystemPrompt = combined
-	} else if promptStrategy != "" {
-		return fmt.Errorf("prompt strategy set without a system prompt override")
-	}
-
-	promptText := prompt.Build(cfg.SystemPrompt, contextText, diff)
+	promptText := prompt.Build(cfg.ResolvedPrompt, contextText, diff)
 	eng, commandLine, err := selectEngine(cfg)
 	if err != nil {
 		return err
@@ -121,25 +104,6 @@ func loadContext(context, contextFile string) (string, error) {
 	parts := []string{strings.TrimSpace(string(data)), strings.TrimSpace(context)}
 	combined := strings.TrimSpace(strings.Join(parts, "\n"))
 	return combined, nil
-}
-
-func applyPromptStrategy(base, override, strategy string) (string, error) {
-	switch strings.ToLower(strategy) {
-	case "", "append":
-		if base == "" {
-			return override, nil
-		}
-		return base + "\n" + override, nil
-	case "prepend":
-		if base == "" {
-			return override, nil
-		}
-		return override + "\n" + base, nil
-	case "replace":
-		return override, nil
-	default:
-		return "", fmt.Errorf("unknown prompt strategy: %s", strategy)
-	}
 }
 
 func selectEngine(cfg config.Config) (engine.Engine, string, error) {

@@ -125,3 +125,14 @@ Bundled presets live in `internal/config/assets/`:
 - No commit if `--amend` is set and there is no previous commit
 - No commit on engine failure or empty output
 - Git state is not modified on errors
+
+## Release acceptance check
+
+For manual, pre-release verification across engines and prompt presets:
+
+```sh
+./scripts/release-check.sh
+```
+
+The script writes a report under `tmp/acceptance-<timestamp>/` with a
+`summary.md` checklist for human review.

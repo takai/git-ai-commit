@@ -4,7 +4,22 @@ Generate Git commit messages from staged diffs using your preferred LLM CLI.
 
 ## Install
 
-Build the binary into `bin/`:
+Package managers:
+
+Homebrew:
+
+```sh
+brew tap takai/tap
+brew install git-ai-commit
+```
+
+mise:
+
+```sh
+mise use -g github:takai/git-ai-commit@latest
+```
+
+Build from source (outputs to `bin/`):
 
 ```sh
 make build

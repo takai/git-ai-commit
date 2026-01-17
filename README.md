@@ -46,6 +46,13 @@ Supported settings:
 - `engines.<name>.command` Command to execute for an engine (string)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
 
+Supported engine names (by convention):
+
+- `claude`
+- `codex`
+- `cursor-agent`
+- `gemini`
+
 Example:
 
 ```toml
@@ -55,6 +62,48 @@ prompt_preset = "default"
 [engines.codex]
 command = "codex"
 args = ["exec", "--model", "gpt-5-mini"]
+```
+
+### Engine examples
+
+Claude:
+
+```toml
+engine = "claude"
+
+[engines.claude]
+command = "claude"
+args = ["-p", "--model", "haiku"]
+```
+
+Codex:
+
+```toml
+engine = "codex"
+
+[engines.codex]
+command = "codex"
+args = ["exec", "--model", "gpt-5-mini"]
+```
+
+Cursor agent:
+
+```toml
+engine = "cursor-agent"
+
+[engines.cursor-agent]
+command = "cursor-agent"
+args = ["-p"]
+```
+
+Gemini:
+
+```toml
+engine = "gemini"
+
+[engines.gemini]
+command = "gemini"
+args = ["-p"]
 ```
 
 ## Prompt presets

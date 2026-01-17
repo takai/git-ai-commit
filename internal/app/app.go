@@ -159,6 +159,9 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	if name == "cursor-agent" {
 		return engine.CLI{Command: "cursor-agent", Args: []string{"-p"}}, "cursor-agent -p", nil
 	}
+	if name == "gemini" {
+		return engine.CLI{Command: "gemini", Args: []string{"-p"}}, "gemini -p", nil
+	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
 }
 

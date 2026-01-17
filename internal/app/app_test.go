@@ -81,3 +81,17 @@ func TestSelectEngineCursorAgentDefault(t *testing.T) {
 		t.Fatalf("command = %q", command)
 	}
 }
+
+func TestSelectEngineGeminiDefault(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "gemini"
+	cfg.Engines = map[string]config.EngineConfig{}
+
+	_, command, err := selectEngine(cfg)
+	if err != nil {
+		t.Fatalf("selectEngine error: %v", err)
+	}
+	if command != "gemini -p" {
+		t.Fatalf("command = %q", command)
+	}
+}

@@ -91,7 +91,7 @@ func TestSelectEngineGeminiDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("selectEngine error: %v", err)
 	}
-	if command != "gemini -p" {
+	if command != "gemini -m gemini-2.5-flash -p {{prompt}}" {
 		t.Fatalf("command = %q", command)
 	}
 }

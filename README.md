@@ -107,7 +107,7 @@ engine = "gemini"
 
 [engines.gemini]
 command = "gemini"
-args = ["-p"]
+args = ["-m", "gemini-2.5-flash", "-p", "{{prompt}}"]
 ```
 
 ## Prompt presets

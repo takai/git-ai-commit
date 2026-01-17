@@ -160,7 +160,7 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 		return engine.CLI{Command: "cursor-agent", Args: []string{"-p"}}, "cursor-agent -p", nil
 	}
 	if name == "gemini" {
-		return engine.CLI{Command: "gemini", Args: []string{"-p"}}, "gemini -p", nil
+		return engine.CLI{Command: "gemini", Args: []string{"-m", "gemini-2.5-flash", "-p", "{{prompt}}"}}, "gemini -m gemini-2.5-flash -p {{prompt}}", nil
 	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
 }

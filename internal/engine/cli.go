@@ -13,8 +13,19 @@ type CLI struct {
 }
 
 func (c CLI) Generate(prompt string) (string, error) {
-	cmd := exec.Command(c.Command, c.Args...)
-	cmd.Stdin = strings.NewReader(prompt)
+	args := make([]string, len(c.Args))
+	copy(args, c.Args)
+	usePromptArg := false
+	for i, arg := range args {
+		if strings.Contains(arg, "{{prompt}}") {
+			args[i] = strings.ReplaceAll(arg, "{{prompt}}", prompt)
+			usePromptArg = true
+		}
+	}
+	cmd := exec.Command(c.Command, args...)
+	if !usePromptArg {
+		cmd.Stdin = strings.NewReader(prompt)
+	}
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout

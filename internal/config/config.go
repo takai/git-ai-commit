@@ -40,7 +40,7 @@ var DefaultEngineArgs = map[string][]string{
 func Default() Config {
 	prompt, _ := LoadPromptPreset(defaultPromptPreset)
 	return Config{
-		DefaultEngine:  "codex",
+		DefaultEngine:  "",
 		SystemPrompt:   prompt,
 		PromptStrategy: "append",
 		PromptPreset:   defaultPromptPreset,

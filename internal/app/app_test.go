@@ -15,7 +15,7 @@ func TestSelectEngineCodexDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("selectEngine error: %v", err)
 	}
-	if command != "codex exec" {
+	if command != "codex exec --model gpt-5.1-codex-mini" {
 		t.Fatalf("command = %q", command)
 	}
 }

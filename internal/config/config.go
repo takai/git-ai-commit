@@ -42,7 +42,7 @@ const defaultPromptPreset = "default"
 
 // DefaultEngineArgs provides default CLI arguments for known engines.
 var DefaultEngineArgs = map[string][]string{
-	"codex":        {"exec"},
+	"codex":        {"exec", "--model", "gpt-5.1-codex-mini"},
 	"claude":       {"-p", "--model", "haiku"},
 	"cursor-agent": {"-p"},
 	"gemini":       {"-m", "gemini-2.5-flash", "-p", "{{prompt}}"},

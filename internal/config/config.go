@@ -29,6 +29,14 @@ var promptFS embed.FS
 
 const defaultPromptPreset = "default"
 
+// DefaultEngineArgs provides default CLI arguments for known engines.
+var DefaultEngineArgs = map[string][]string{
+	"codex":        {"exec"},
+	"claude":       {"-p", "--model", "haiku"},
+	"cursor-agent": {"-p"},
+	"gemini":       {"-m", "gemini-2.5-flash", "-p", "{{prompt}}"},
+}
+
 func Default() Config {
 	prompt, _ := LoadPromptPreset(defaultPromptPreset)
 	return Config{

@@ -150,17 +150,8 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	if spec, ok := cfg.Engines[name]; ok {
 		return engine.CLI{Command: name, Args: spec.Args}, strings.Join(append([]string{name}, spec.Args...), " "), nil
 	}
-	if name == "codex" {
-		return engine.CLI{Command: "codex", Args: []string{"exec"}}, "codex exec", nil
-	}
-	if name == "claude" {
-		return engine.CLI{Command: "claude", Args: []string{"-p", "--model", "haiku"}}, "claude -p --model haiku", nil
-	}
-	if name == "cursor-agent" {
-		return engine.CLI{Command: "cursor-agent", Args: []string{"-p"}}, "cursor-agent -p", nil
-	}
-	if name == "gemini" {
-		return engine.CLI{Command: "gemini", Args: []string{"-m", "gemini-2.5-flash", "-p", "{{prompt}}"}}, "gemini -m gemini-2.5-flash -p {{prompt}}", nil
+	if args, ok := config.DefaultEngineArgs[name]; ok {
+		return engine.CLI{Command: name, Args: args}, strings.Join(append([]string{name}, args...), " "), nil
 	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
 }

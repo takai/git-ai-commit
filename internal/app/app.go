@@ -150,6 +150,12 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	if name == "codex" {
 		return engine.CLI{Command: "codex", Args: []string{"exec"}}, "codex exec", nil
 	}
+	if name == "claude" {
+		return engine.CLI{Command: "claude", Args: []string{"-p", "--model", "haiku"}}, "claude -p --model haiku", nil
+	}
+	if name == "cursor-agent" {
+		return engine.CLI{Command: "cursor-agent", Args: []string{"-p"}}, "cursor-agent -p", nil
+	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
 }
 

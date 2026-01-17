@@ -53,3 +53,31 @@ func TestSelectEngineCodexDefault(t *testing.T) {
 		t.Fatalf("command = %q", command)
 	}
 }
+
+func TestSelectEngineClaudeDefault(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "claude"
+	cfg.Engines = map[string]config.EngineConfig{}
+
+	_, command, err := selectEngine(cfg)
+	if err != nil {
+		t.Fatalf("selectEngine error: %v", err)
+	}
+	if command != "claude -p --model haiku" {
+		t.Fatalf("command = %q", command)
+	}
+}
+
+func TestSelectEngineCursorAgentDefault(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "cursor-agent"
+	cfg.Engines = map[string]config.EngineConfig{}
+
+	_, command, err := selectEngine(cfg)
+	if err != nil {
+		t.Fatalf("selectEngine error: %v", err)
+	}
+	if command != "cursor-agent -p" {
+		t.Fatalf("command = %q", command)
+	}
+}

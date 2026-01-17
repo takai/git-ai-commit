@@ -308,6 +308,38 @@ func TestPromptFileMerging(t *testing.T) {
 	})
 }
 
+func TestUserPromptFileInvalidEvenWithRepoConfig(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("prompt = 'conventional'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	configDir := filepath.Join(configHome, "git-ai-commit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte("prompt_file = 'missing.md'\n"), 0o644); err != nil {
+		t.Fatalf("write user config: %v", err)
+	}
+
+	withDir(t, repo, func() {
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for invalid user prompt_file")
+		}
+	})
+}
+
 func TestValidateCLIPromptExclusivity(t *testing.T) {
 	err := ValidateCLIPromptExclusivity("conventional", "custom.md")
 	if err == nil {
@@ -388,6 +420,39 @@ func TestRepoPromptFileOutsideRootRejected(t *testing.T) {
 		_, err := Load()
 		if err == nil {
 			t.Fatal("expected error for prompt_file outside repo root")
+		}
+	})
+}
+
+func TestRepoPromptFileAbsolutePathRejected(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	promptPath := filepath.Join(repo, "prompts", "commit.md")
+	if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
+		t.Fatalf("mkdir prompts dir: %v", err)
+	}
+	if err := os.WriteFile(promptPath, []byte("Repo prompt"), 0o644); err != nil {
+		t.Fatalf("write prompt: %v", err)
+	}
+
+	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("prompt_file = '"+promptPath+"'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	trustRepoConfig(t, repo, repoConfig)
+
+	withDir(t, repo, func() {
+		_, err := Load()
+		if err == nil {
+			t.Fatal("expected error for absolute prompt_file in repo config")
 		}
 	})
 }

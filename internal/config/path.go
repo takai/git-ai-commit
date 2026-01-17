@@ -47,3 +47,25 @@ func isPathWithinRoot(path, root string) (bool, error) {
 	}
 	return true, nil
 }
+
+func isPathWithinRootClean(path, root string) (bool, error) {
+	pathAbs, err := filepath.Abs(path)
+	if err != nil {
+		return false, err
+	}
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return false, err
+	}
+	rel, err := filepath.Rel(rootAbs, pathAbs)
+	if err != nil {
+		return false, err
+	}
+	if rel == "." {
+		return true, nil
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return false, nil
+	}
+	return true, nil
+}

@@ -75,6 +75,9 @@ func Load() (Config, error) {
 		if cfg.PromptFile != "" {
 			promptSource = "user"
 			promptFilePath = userPath
+			if _, err := loadPromptFile(cfg.PromptFile, promptFilePath, ""); err != nil {
+				return cfg, err
+			}
 		} else if cfg.Prompt != "" {
 			promptSource = "user"
 		}
@@ -191,34 +194,11 @@ func validatePromptExclusivity(prompt, promptFile, source string) error {
 func resolvePrompt(cfg *Config, promptFilePath, promptFileRepoRoot string) error {
 	// If prompt_file is set, load from file (relative to config file's directory)
 	if strings.TrimSpace(cfg.PromptFile) != "" {
-		var basePath string
-		if promptFilePath != "" {
-			basePath = filepath.Dir(promptFilePath)
-		} else {
-			// Fallback to current directory
-			basePath = "."
-		}
-		fullPath := cfg.PromptFile
-		if !filepath.IsAbs(fullPath) {
-			fullPath = filepath.Join(basePath, cfg.PromptFile)
-		}
-		if promptFileRepoRoot != "" {
-			if filepath.IsAbs(cfg.PromptFile) {
-				return fmt.Errorf("prompt_file must be within repo root")
-			}
-			allowed, err := isPathWithinRoot(fullPath, promptFileRepoRoot)
-			if err != nil {
-				return err
-			}
-			if !allowed {
-				return fmt.Errorf("prompt_file must be within repo root")
-			}
-		}
-		data, err := os.ReadFile(fullPath)
+		promptText, err := loadPromptFile(cfg.PromptFile, promptFilePath, promptFileRepoRoot)
 		if err != nil {
-			return fmt.Errorf("read prompt file %q: %w", fullPath, err)
+			return err
 		}
-		cfg.ResolvedPrompt = strings.TrimSpace(string(data))
+		cfg.ResolvedPrompt = promptText
 		return nil
 	}
 
@@ -233,6 +213,37 @@ func resolvePrompt(cfg *Config, promptFilePath, promptFileRepoRoot string) error
 	}
 	cfg.ResolvedPrompt = promptText
 	return nil
+}
+
+func loadPromptFile(promptFile, promptFilePath, promptFileRepoRoot string) (string, error) {
+	var basePath string
+	if promptFilePath != "" {
+		basePath = filepath.Dir(promptFilePath)
+	} else {
+		// Fallback to current directory
+		basePath = "."
+	}
+	fullPath := promptFile
+	if !filepath.IsAbs(fullPath) {
+		fullPath = filepath.Join(basePath, promptFile)
+	}
+	if promptFileRepoRoot != "" {
+		if filepath.IsAbs(promptFile) {
+			return "", fmt.Errorf("prompt_file must be within repo root")
+		}
+		allowed, err := isPathWithinRoot(fullPath, promptFileRepoRoot)
+		if err != nil {
+			return "", err
+		}
+		if !allowed {
+			return "", fmt.Errorf("prompt_file must be within repo root")
+		}
+	}
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("read prompt file %q: %w", fullPath, err)
+	}
+	return strings.TrimSpace(string(data)), nil
 }
 
 func configPath() (string, error) {

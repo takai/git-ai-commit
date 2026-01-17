@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/BurntSushi/toml"
 )
 
 type trustedRepoList struct {
@@ -37,6 +39,9 @@ func loadTrustedRepoConfig(repoRoot, repoConfigPath string) ([]byte, bool, error
 		return nil, false, fmt.Errorf("read repo config: %w", err)
 	}
 	hash := computeHash(data)
+	if err := validateRepoPromptFilePath(data, repoConfigPath, repoRoot); err != nil {
+		return nil, false, err
+	}
 
 	trustPath, err := trustedRepoListPath()
 	if err != nil {
@@ -161,6 +166,29 @@ func promptTrust(path string, data []byte, changed bool) bool {
 	line, _ := reader.ReadString('\n')
 	line = strings.TrimSpace(line)
 	return strings.EqualFold(line, "y") || strings.EqualFold(line, "yes")
+}
+
+func validateRepoPromptFilePath(data []byte, repoConfigPath, repoRoot string) error {
+	var raw rawConfig
+	if err := toml.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("parse repo config: %w", err)
+	}
+	if strings.TrimSpace(raw.PromptFile) == "" {
+		return nil
+	}
+	if filepath.IsAbs(raw.PromptFile) {
+		return fmt.Errorf("repo config %s: prompt_file must be within repo root", repoConfigPath)
+	}
+	basePath := filepath.Dir(repoConfigPath)
+	fullPath := filepath.Join(basePath, raw.PromptFile)
+	allowed, err := isPathWithinRootClean(fullPath, repoRoot)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return fmt.Errorf("repo config %s: prompt_file must be within repo root", repoConfigPath)
+	}
+	return nil
 }
 
 func findTrustedEntry(list trustedRepoList, repoRoot, repoConfigPath string) (trustedRepoEntry, int, bool) {

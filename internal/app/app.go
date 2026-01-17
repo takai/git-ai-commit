@@ -99,7 +99,7 @@ func Run(context, contextFile, systemPrompt, promptStrategy, promptPreset, engin
 	if err != nil {
 		return err
 	}
-	message := strings.TrimSpace(output)
+	message := sanitizeMessage(output)
 	if message == "" {
 		return fmt.Errorf("empty commit message from engine")
 	}
@@ -163,6 +163,27 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 		return engine.CLI{Command: "gemini", Args: []string{"-p"}}, "gemini -p", nil
 	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
+}
+
+func sanitizeMessage(message string) string {
+	clean := strings.TrimSpace(message)
+	if clean == "" {
+		return ""
+	}
+	lines := strings.Split(clean, "\n")
+	var filtered []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+	clean = strings.TrimSpace(strings.Join(filtered, "\n"))
+	if len(clean) >= 2 && strings.HasPrefix(clean, "`") && strings.HasSuffix(clean, "`") {
+		clean = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(clean, "`"), "`"))
+	}
+	return clean
 }
 
 func commitDiff(amend bool) (string, error) {

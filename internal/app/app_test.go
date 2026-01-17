@@ -95,3 +95,19 @@ func TestSelectEngineGeminiDefault(t *testing.T) {
 		t.Fatalf("command = %q", command)
 	}
 }
+
+func TestSanitizeMessageCodeFence(t *testing.T) {
+	input := "```\nfeat: add thing\n```"
+	got := sanitizeMessage(input)
+	if got != "feat: add thing" {
+		t.Fatalf("sanitizeMessage = %q", got)
+	}
+}
+
+func TestSanitizeMessageInlineBackticks(t *testing.T) {
+	input := "`feat: add thing`"
+	got := sanitizeMessage(input)
+	if got != "feat: add thing" {
+		t.Fatalf("sanitizeMessage = %q", got)
+	}
+}

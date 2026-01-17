@@ -45,7 +45,7 @@ Supported settings:
 
 - `engine` Default engine name (string)
 - `system_prompt` Override the system prompt text (string)
-- `prompt_strategy` How to merge `system_prompt` with default: `replace`, `prepend`, `append`
+- `prompt_strategy` How to merge `system_prompt` with default: `replace`, `prepend`, `append` (requires `system_prompt` to be set)
 - `prompt_preset` Use a bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
 - `engines.<name>.command` Command to execute for an engine (string)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
@@ -56,6 +56,10 @@ Supported engine names (by convention):
 - `codex`
 - `cursor-agent`
 - `gemini`
+
+If no engine is configured, auto-detection tries commands in this order: `claude` → `gemini` → `codex`. The first available command is used.
+
+Any engine name not listed above is treated as a direct command. For example, `engine = "my-llm-cli"` will execute `my-llm-cli` with the prompt on stdin.
 
 Example:
 
@@ -69,6 +73,8 @@ args = ["exec", "--model", "gpt-5-mini"]
 ```
 
 ### Engine examples
+
+By default, the prompt is sent via stdin. For CLIs that require the prompt as an argument, use `{{prompt}}` as a placeholder in the args list.
 
 Claude:
 

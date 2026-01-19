@@ -1,35 +1,61 @@
 version: 2
 
 builds:
-  - id: git-ai-commit
-    main: ./cmd/git-ai-commit
-    binary: git-ai-commit
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - darwin
-      - linux
-    goarch:
-      - amd64
-      - arm64
+    - id: git-ai-commit
+      main: ./cmd/git-ai-commit
+      binary: git-ai-commit
+      ldflags:
+          - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
+      env:
+          - CGO_ENABLED=0
+      goos:
+          - darwin
+          - linux
+      goarch:
+          - amd64
+          - arm64
 
 archives:
-  - format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files:
-      - README.md
-      - LICENSE
+    - id: default
+      formats: ["tar.gz"]
+      format_overrides:
+          - goos: darwin
+            formats: ["zip"]
+
+      files:
+          - README.md
+          - LICENSE
 
 checksum:
-  name_template: "checksums.txt"
-  algorithm: sha256
+    name_template: "checksums.txt"
+    algorithm: sha256
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
+    sort: asc
+    filters:
+        exclude:
+            - "^docs:"
+            - "^test:"
+            - "^chore:"
+
+brews:
+    - name: git-ai-commit
+      directory: Formula
+
+      homepage: "https://github.com/takai/git-ai-commit"
+      description: "Generate Git commit messages from staged diffs using your preferred LLM CLI."
+      license: "MIT"
+
+      repository:
+          owner: takai
+          name: homebrew-tap
+          token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+
+      commit_author:
+          name: "Naoto Takai"
+          email: takai@recompile.net
+
+      url_template: "https://github.com/takai/git-ai-commit/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+      install: |
+          bin.install "git-ai-commit"

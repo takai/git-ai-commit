@@ -1,20 +1,33 @@
 package prompt
 
-import "strings"
+import (
+	"bytes"
+	_ "embed"
+	"strings"
+	"text/template"
+)
+
+//go:embed prompt.tmpl
+var promptTemplateText string
+
+var promptTemplate = template.Must(template.New("prompt").Parse(promptTemplateText))
+
+type PromptData struct {
+	SystemPrompt string
+	Context      string
+	Diff         string
+}
 
 func Build(systemPrompt, context, diff string) string {
-	var b strings.Builder
-	if systemPrompt != "" {
-		b.WriteString("System Prompt:\n")
-		b.WriteString(systemPrompt)
-		b.WriteString("\n\n")
+	data := PromptData{
+		SystemPrompt: strings.TrimSpace(systemPrompt),
+		Context:      strings.TrimSpace(context),
+		Diff:         diff,
 	}
-	if context != "" {
-		b.WriteString("Context:\n")
-		b.WriteString(context)
-		b.WriteString("\n\n")
+	var buf bytes.Buffer
+	if err := promptTemplate.Execute(&buf, data); err != nil {
+		// Fallback to simple concatenation on template error
+		return systemPrompt + "\n\n" + context + "\n\n" + diff
 	}
-	b.WriteString("Git Diff:\n")
-	b.WriteString(diff)
-	return b.String()
+	return buf.String()
 }

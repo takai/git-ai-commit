@@ -1,0 +1,19 @@
+=== INSTRUCTIONS ===
+{{.SystemPrompt}}
+
+OUTPUT RULES:
+- Output only a Git commit message
+- Begin with the commit subject line
+- Exclude explanations, preambles, and meta commentary
+- DO NOT reference diffs, file names, or line numbers
+- DO NOT use code fences or backticks
+
+{{if .Context}}
+=== CONTEXT ===
+{{.Context}}
+{{end}}
+
+=== GIT DIFF ===
+{{.Diff}}
+
+=== OUTPUT ===

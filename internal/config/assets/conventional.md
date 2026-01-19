@@ -12,8 +12,3 @@ Rules:
   - Describe the breaking change clearly in the footer using "BREAKING CHANGE:"
 - If useful, add a body explaining *why* the change was made, not just what changed
 - Wrap body lines at approximately 72 characters
-- Do not mention the diff, filenames, or line numbers explicitly
-- Do not wrap the message in backticks or code fences
-- Output only the commit message, with no extra commentary
-
-Write the commit message based on the following git diff:

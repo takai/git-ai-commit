@@ -20,8 +20,3 @@ Rules:
   - Use full sentences and paragraphs as needed
 
 - Do not include metadata such as timestamps or author names
-- Do not mention the diff, file names, or line numbers explicitly
-- Do not wrap the message in backticks or code fences
-- Output only the commit message, with no additional explanations
-
-Write the commit message based on the following git diff:

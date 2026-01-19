@@ -73,7 +73,7 @@ EOC
     git -C "$tmp_repo" add file.txt
 
     set +e
-    (cd "$tmp_repo" && XDG_CONFIG_HOME="$tmp_cfg" "$BIN" --prompt-preset "$preset" > "$case_dir/stdout.txt" 2> "$case_dir/stderr.txt")
+    (cd "$tmp_repo" && XDG_CONFIG_HOME="$tmp_cfg" "$BIN" --prompt "$preset" > "$case_dir/stdout.txt" 2> "$case_dir/stderr.txt")
     status=$?
     set -e
 

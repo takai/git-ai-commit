@@ -9,6 +9,11 @@ import (
 	"git-ai-commit/internal/app"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+)
+
 type options struct {
 	context      string
 	contextFile  string
@@ -27,6 +32,10 @@ func main() {
 	if err != nil {
 		if errors.Is(err, errHelp) {
 			printUsage(os.Stdout)
+			return
+		}
+		if errors.Is(err, errVersion) {
+			printVersion()
 			return
 		}
 		fmt.Fprintln(os.Stderr, err)
@@ -51,6 +60,7 @@ func main() {
 }
 
 var errHelp = errors.New("help requested")
+var errVersion = errors.New("version requested")
 
 func parseArgs(args []string) (options, error) {
 	var opts options
@@ -64,6 +74,8 @@ func parseArgs(args []string) (options, error) {
 			switch name {
 			case "help":
 				return opts, errHelp
+			case "version":
+				return opts, errVersion
 			case "context", "context-file", "prompt", "prompt-file", "engine", "include":
 				if !hasValue {
 					if i+1 >= len(args) {
@@ -180,4 +192,9 @@ func printUsage(out *os.File) {
 	fmt.Fprintln(out, "  --debug-prompt            Print the prompt before executing the engine")
 	fmt.Fprintln(out, "  --debug-command           Print the engine command before execution")
 	fmt.Fprintln(out, "  -h, --help                Show help")
+	fmt.Fprintln(out, "  --version                 Show version information")
+}
+
+func printVersion() {
+	fmt.Printf("git-ai-commit version %s (%s)\n", version, commit)
 }

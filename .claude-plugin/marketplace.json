@@ -1,0 +1,13 @@
+{
+  "name": "git-ai-commit-plugins",
+  "owner": {
+    "name": "Naoto Takai"
+  },
+  "plugins": [
+    {
+      "name": "ai-commit",
+      "source": "./plugins/claude/ai-commit",
+      "description": "Generate Git commit messages from staged diffs and apply them automatically, using git-ai-commit as the execution backend."
+    }
+  ]
+}

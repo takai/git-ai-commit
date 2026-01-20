@@ -1,0 +1,8 @@
+{
+  "name": "ai-commit",
+  "description": "Generate Git commit messages from staged diffs and apply them automatically, using git-ai-commit as the execution backend.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Naoto Takai"
+  }
+}

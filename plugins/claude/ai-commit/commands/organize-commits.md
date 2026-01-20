@@ -1,5 +1,6 @@
 ---
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git reset:*), Bash(git ai-commit:*), Bash(git log:*)
+context: fork
 description: Organize changes into atomic commits using git-ai-commit
 ---
 

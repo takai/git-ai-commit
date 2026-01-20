@@ -1,5 +1,6 @@
 ---
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git ai-commit:*)
+context: fork
 description: Commit staged changes only using git-ai-commit
 ---
 

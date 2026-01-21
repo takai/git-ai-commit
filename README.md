@@ -2,6 +2,9 @@
 
 Generate Git commit messages from staged diffs using your preferred LLM CLI.
 
+git-ai-commit does not talk to LLM APIs directly.
+Instead, it delegates generation to existing LLM CLIs such as Claude Code, Gemini, or Codex, so no API keys, SDKs, or vendor-specific integrations are required.
+
 ## Install
 
 Package managers:
@@ -55,7 +58,7 @@ Configuration is layered, allowing global defaults with per-repository overrides
 2. Repo config: `.git-ai-commit.toml` at the repository root
 3. Command-line flags
 
-This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules. Repository config is applied only after an initial trust prompt.
+This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules without relying on hosted services. Repository config is applied only after an initial trust prompt.
 
 Example: Use Codex with Conventional Commits by default
 
@@ -72,6 +75,8 @@ Supported settings:
 - `engines.<name>.args` Argument list for the engine command (array of strings)
 
 ### Engines
+
+git-ai-commit treats LLMs as external commands, not as APIs. This design avoids direct network calls and API key management, and lets you reuse your existing LLM CLI setup.
 
 Supported engines:
 

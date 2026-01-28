@@ -105,9 +105,9 @@ func TestParseNumstatBinaryFile(t *testing.T) {
 func TestStagedDiffWithSummary(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {
-		// Create a regular file and a large lock file (above threshold)
+		// Create a regular file and a large lock file (above 150KB threshold)
 		writeFile(t, repo, "main.go", "package main\n\nfunc main() {}\n")
-		writeLargeLockFile(t, repo, "uv.lock", 300)
+		writeLockFileWithSize(t, repo, "uv.lock", 160*1024) // 160KB, above threshold
 
 		runGit(t, repo, "add", "main.go", "uv.lock")
 
@@ -128,13 +128,28 @@ func TestStagedDiffWithSummary(t *testing.T) {
 		if strings.Contains(diff, "package-version-1") {
 			t.Error("expected diff NOT to contain uv.lock content details")
 		}
-		// Should contain line count summary
-		if !strings.Contains(diff, "300") {
-			t.Error("expected diff to contain line count for uv.lock")
+		// Should contain "content omitted" marker
+		if !strings.Contains(diff, "content omitted") {
+			t.Error("expected diff to contain summary marker")
 		}
 	})
 }
 
+// writeLockFileWithSize creates a lock file with approximately the specified size in bytes
+func writeLockFileWithSize(t *testing.T, repo, name string, targetBytes int) {
+	t.Helper()
+	var content strings.Builder
+	lineSize := len("package-version-0 = \"1.0.0\"\n")
+	lines := targetBytes / lineSize
+	for i := 0; i < lines; i++ {
+		content.WriteString("package-version-")
+		content.WriteString(strconv.Itoa(i))
+		content.WriteString(" = \"1.0.0\"\n")
+	}
+	writeFile(t, repo, name, content.String())
+}
+
+// writeLargeLockFile creates a lock file with the specified number of lines (for backward compatibility)
 func writeLargeLockFile(t *testing.T, repo, name string, lines int) {
 	t.Helper()
 	var content strings.Builder
@@ -149,8 +164,8 @@ func writeLargeLockFile(t *testing.T, repo, name string, lines int) {
 func TestStagedDiffWithSummaryOnlyLargeLockFile(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {
-		// Only stage a large lock file (above threshold)
-		writeLargeLockFile(t, repo, "package-lock.json", 300)
+		// Only stage a large lock file (above 150KB threshold)
+		writeLockFileWithSize(t, repo, "package-lock.json", 160*1024)
 		runGit(t, repo, "add", "package-lock.json")
 
 		diff, err := StagedDiffWithSummary()
@@ -202,8 +217,8 @@ func TestStagedDiffWithSummaryNoLockFiles(t *testing.T) {
 func TestStagedDiffWithSummarySmallLockFile(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {
-		// Small lock file (below threshold) should show full diff
-		writeLargeLockFile(t, repo, "uv.lock", 50)
+		// Small lock file (below 150KB threshold) should show full diff
+		writeLockFileWithSize(t, repo, "uv.lock", 100*1024) // 100KB, below threshold
 		runGit(t, repo, "add", "uv.lock")
 
 		diff, err := StagedDiffWithSummary()
@@ -225,8 +240,8 @@ func TestStagedDiffWithSummarySmallLockFile(t *testing.T) {
 func TestStagedDiffWithSummaryLargeLockFile(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {
-		// Large lock file (above threshold) should be summarized
-		writeLargeLockFile(t, repo, "uv.lock", 300)
+		// Large lock file (above 150KB threshold) should be summarized
+		writeLockFileWithSize(t, repo, "uv.lock", 160*1024) // 160KB, above threshold
 		runGit(t, repo, "add", "uv.lock")
 
 		diff, err := StagedDiffWithSummary()

@@ -20,9 +20,10 @@ var lockFileSuffixes = []string{
 	"-lock.yaml",
 }
 
-// LockFileSummaryThreshold is the minimum number of changed lines
+// LockFileSummaryThreshold is the minimum diff size in bytes
 // before a lock file diff is summarized instead of shown in full.
-const LockFileSummaryThreshold = 200
+// 150KB is chosen based on LLM context limits (Claude Haiku: 200k tokens).
+const LockFileSummaryThreshold = 150 * 1024 // 150KB
 
 func IsLockFile(filename string) bool {
 	base := filepath.Base(filename)
@@ -92,34 +93,51 @@ func StagedDiffWithSummary() (string, error) {
 
 	stats := ParseNumstat(numstatOut.String())
 
-	// Identify large lock files that should be summarized
-	largeLockFiles := make(map[string]FileStat)
+	// Get diff for each file and check if lock files exceed threshold
+	type fileDiffInfo struct {
+		stat    FileStat
+		diff    string
+		isLarge bool
+	}
+	fileDiffs := make([]fileDiffInfo, 0, len(stats))
+
 	for _, stat := range stats {
-		if IsLockFile(stat.Filename) {
-			totalChanges := stat.Added + stat.Deleted
-			if totalChanges >= LockFileSummaryThreshold {
-				largeLockFiles[stat.Filename] = stat
-			}
+		diff, err := stagedDiffForFile(stat.Filename)
+		if err != nil {
+			return "", err
+		}
+
+		isLarge := IsLockFile(stat.Filename) && len(diff) >= LockFileSummaryThreshold
+		fileDiffs = append(fileDiffs, fileDiffInfo{
+			stat:    stat,
+			diff:    diff,
+			isLarge: isLarge,
+		})
+	}
+
+	// Check if any lock file exceeds threshold
+	hasLargeLockFile := false
+	for _, fd := range fileDiffs {
+		if fd.isLarge {
+			hasLargeLockFile = true
+			break
 		}
 	}
 
 	// If no large lock files, return standard diff
-	if len(largeLockFiles) == 0 {
+	if !hasLargeLockFile {
 		return StagedDiff()
 	}
 
 	var result strings.Builder
 
-	for _, stat := range stats {
-		if lockStat, isLargeLock := largeLockFiles[stat.Filename]; isLargeLock {
-			result.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", stat.Filename, stat.Filename))
-			result.WriteString(fmt.Sprintf("[Lock file: +%d -%d lines, content omitted]\n\n", lockStat.Added, lockStat.Deleted))
+	for _, fd := range fileDiffs {
+		if fd.isLarge {
+			result.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", fd.stat.Filename, fd.stat.Filename))
+			result.WriteString(fmt.Sprintf("[Lock file: +%d -%d lines, %d bytes, content omitted]\n\n",
+				fd.stat.Added, fd.stat.Deleted, len(fd.diff)))
 		} else {
-			fileDiff, err := stagedDiffForFile(stat.Filename)
-			if err != nil {
-				return "", err
-			}
-			result.WriteString(fileDiff)
+			result.WriteString(fd.diff)
 		}
 	}
 

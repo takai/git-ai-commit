@@ -73,6 +73,9 @@ Supported settings:
 - `prompt` Bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
 - `prompt_file` Path to a custom prompt file (relative to the config file)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
+- `filter.max_file_lines` Maximum lines per file in diff (default: 200)
+- `filter.exclude_patterns` Additional glob patterns to exclude from diff
+- `filter.default_exclude_patterns` Override built-in exclude patterns
 
 ### Engines
 
@@ -116,6 +119,38 @@ prompt_file = "prompts/commit.md"
 ```
 
 Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.
+
+### Diff Filtering
+
+When the staged diff is large, it can exceed LLM context limits or degrade commit message quality. git-ai-commit automatically filters the diff to help LLMs focus on meaningful changes.
+
+**Default behavior:**
+
+- Each file is limited to 200 lines (configurable via `filter.max_file_lines`)
+- Lock files and generated files are excluded by default
+
+**Default exclude patterns:**
+
+- `**/*.lock`, `**/*-lock.json`, `**/*.lock.yaml`, `**/*-lock.yaml`, `**/*.lockfile`
+- `**/*.min.js`, `**/*.min.css`, `**/*.map`
+- `**/go.sum`
+
+Example: Customize filtering
+
+```toml
+[filter]
+max_file_lines = 300
+
+# Add patterns to exclude (merged with defaults)
+exclude_patterns = [
+    "**/vendor/**",
+    "**/*.generated.go",
+    "**/dist/**"
+]
+
+# Or replace defaults entirely
+# default_exclude_patterns = ["**/my-lock.json"]
+```
 
 ## Claude Code Plugin
 

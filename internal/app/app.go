@@ -45,7 +45,7 @@ func Run(context, contextFile, promptName, promptFile, engineName string, amend,
 		}
 	}
 
-	diff, err := commitDiff(amend)
+	diff, err := commitDiff(amend, cfg)
 	if err != nil {
 		return err
 	}
@@ -141,11 +141,55 @@ func sanitizeMessage(message string) string {
 	return clean
 }
 
-func commitDiff(amend bool) (string, error) {
+func commitDiff(amend bool, cfg config.Config) (string, error) {
+	var diff string
+	var err error
 	if amend {
-		return git.LastCommitDiff()
+		diff, err = git.LastCommitDiff()
+	} else {
+		diff, err = git.StagedDiff()
 	}
-	return git.StagedDiff()
+	if err != nil {
+		return "", err
+	}
+
+	// Determine exclude patterns
+	patterns := git.DefaultExcludePatterns()
+	if len(cfg.Filter.DefaultExcludePatterns) > 0 {
+		patterns = cfg.Filter.DefaultExcludePatterns
+	}
+	patterns = append(patterns, cfg.Filter.ExcludePatterns...)
+
+	// Determine max file lines
+	maxLines := cfg.Filter.MaxFileLines
+	if maxLines == 0 {
+		maxLines = git.DefaultMaxFileLines
+	}
+
+	opts := git.Options{
+		MaxFileLines:    maxLines,
+		ExcludePatterns: patterns,
+	}
+	result := git.Filter(diff, opts)
+
+	if result.Truncated || len(result.ExcludedFiles) > 0 {
+		return result.Diff + formatFilterNotice(result), nil
+	}
+	return result.Diff, nil
+}
+
+func formatFilterNotice(result git.Result) string {
+	var parts []string
+	if len(result.ExcludedFiles) > 0 {
+		parts = append(parts, fmt.Sprintf("Excluded files: %s", strings.Join(result.ExcludedFiles, ", ")))
+	}
+	if len(result.TruncatedFiles) > 0 {
+		parts = append(parts, fmt.Sprintf("Truncated files: %s", strings.Join(result.TruncatedFiles, ", ")))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "\n\n[Filter notice: " + strings.Join(parts, "; ") + "]"
 }
 
 func stageChanges(addAll bool, includeFiles []string) (func(), error) {

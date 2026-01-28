@@ -145,7 +145,7 @@ func commitDiff(amend bool) (string, error) {
 	if amend {
 		return git.LastCommitDiff()
 	}
-	return git.StagedDiff()
+	return git.StagedDiffWithSummary()
 }
 
 func stageChanges(addAll bool, includeFiles []string) (func(), error) {

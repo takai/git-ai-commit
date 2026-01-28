@@ -9,16 +9,9 @@ import (
 	"strings"
 )
 
+// lockFileNames contains lock files that don't match common suffixes
 var lockFileNames = map[string]bool{
-	"uv.lock":           true,
-	"poetry.lock":       true,
-	"package-lock.json": true,
-	"yarn.lock":         true,
-	"pnpm-lock.yaml":    true,
-	"Gemfile.lock":      true,
-	"Cargo.lock":        true,
-	"go.sum":            true,
-	"composer.lock":     true,
+	"go.sum": true,
 }
 
 var lockFileSuffixes = []string{

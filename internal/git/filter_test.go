@@ -6,7 +6,7 @@ import (
 )
 
 func TestFilter_Empty(t *testing.T) {
-	result := Filter("", Options{MaxFileLines: 200})
+	result := Filter("", Options{MaxFileLines: 100})
 	if result.Diff != "" {
 		t.Errorf("expected empty diff, got %q", result.Diff)
 	}
@@ -31,7 +31,7 @@ index abc123..def456 100644
 +import "fmt"
  func main() {}
 `
-	result := Filter(diff, Options{MaxFileLines: 200})
+	result := Filter(diff, Options{MaxFileLines: 100})
 	if result.Truncated {
 		t.Error("expected Truncated to be false")
 	}
@@ -148,7 +148,7 @@ index abc123..def456 100644
 @@ -1,1 +1,2 @@
 +line c
 `
-	result := Filter(diff, Options{MaxFileLines: 200})
+	result := Filter(diff, Options{MaxFileLines: 100})
 	if result.Truncated {
 		t.Error("expected no truncation")
 	}
@@ -183,8 +183,8 @@ index abc123..def456 100644
 @@ -1,1 +1,2 @@
 +m
 `
-	result1 := Filter(diff, Options{MaxFileLines: 200})
-	result2 := Filter(diff, Options{MaxFileLines: 200})
+	result1 := Filter(diff, Options{MaxFileLines: 100})
+	result2 := Filter(diff, Options{MaxFileLines: 100})
 
 	if result1.Diff != result2.Diff {
 		t.Error("expected deterministic output")

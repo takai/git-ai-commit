@@ -8,7 +8,7 @@ import (
 )
 
 // DefaultMaxFileLines is the default maximum number of lines per file.
-const DefaultMaxFileLines = 200
+const DefaultMaxFileLines = 100
 
 // DefaultExcludePatterns returns the built-in default patterns for files to exclude from diff.
 func DefaultExcludePatterns() []string {

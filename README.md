@@ -73,7 +73,7 @@ Supported settings:
 - `prompt` Bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
 - `prompt_file` Path to a custom prompt file (relative to the config file)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
-- `filter.max_file_lines` Maximum lines per file in diff (default: 200)
+- `filter.max_file_lines` Maximum lines per file in diff (default: 100)
 - `filter.exclude_patterns` Additional glob patterns to exclude from diff
 - `filter.default_exclude_patterns` Override built-in exclude patterns
 
@@ -126,7 +126,7 @@ When the staged diff is large, it can exceed LLM context limits or degrade commi
 
 **Default behavior:**
 
-- Each file is limited to 200 lines (configurable via `filter.max_file_lines`)
+- Each file is limited to 100 lines (configurable via `filter.max_file_lines`)
 - Lock files and generated files are excluded by default
 
 **Default exclude patterns:**

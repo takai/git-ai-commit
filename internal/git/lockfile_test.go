@@ -105,9 +105,9 @@ func TestParseNumstatBinaryFile(t *testing.T) {
 func TestStagedDiffWithSummary(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {
-		// Create a regular file and a lock file
+		// Create a regular file and a large lock file (above threshold)
 		writeFile(t, repo, "main.go", "package main\n\nfunc main() {}\n")
-		writeLargeLockFile(t, repo, "uv.lock", 100)
+		writeLargeLockFile(t, repo, "uv.lock", 300)
 
 		runGit(t, repo, "add", "main.go", "uv.lock")
 
@@ -129,7 +129,7 @@ func TestStagedDiffWithSummary(t *testing.T) {
 			t.Error("expected diff NOT to contain uv.lock content details")
 		}
 		// Should contain line count summary
-		if !strings.Contains(diff, "100") {
+		if !strings.Contains(diff, "300") {
 			t.Error("expected diff to contain line count for uv.lock")
 		}
 	})
@@ -146,11 +146,11 @@ func writeLargeLockFile(t *testing.T, repo, name string, lines int) {
 	writeFile(t, repo, name, content.String())
 }
 
-func TestStagedDiffWithSummaryOnlyLockFile(t *testing.T) {
+func TestStagedDiffWithSummaryOnlyLargeLockFile(t *testing.T) {
 	repo := setupRepo(t)
 	withRepo(t, repo, func() {
-		// Only stage a lock file
-		writeLargeLockFile(t, repo, "package-lock.json", 50)
+		// Only stage a large lock file (above threshold)
+		writeLargeLockFile(t, repo, "package-lock.json", 300)
 		runGit(t, repo, "add", "package-lock.json")
 
 		diff, err := StagedDiffWithSummary()
@@ -195,6 +195,52 @@ func TestStagedDiffWithSummaryNoLockFiles(t *testing.T) {
 		// Should NOT contain lock file marker
 		if strings.Contains(diff, "Lock file") {
 			t.Error("expected diff NOT to contain lock file marker")
+		}
+	})
+}
+
+func TestStagedDiffWithSummarySmallLockFile(t *testing.T) {
+	repo := setupRepo(t)
+	withRepo(t, repo, func() {
+		// Small lock file (below threshold) should show full diff
+		writeLargeLockFile(t, repo, "uv.lock", 50)
+		runGit(t, repo, "add", "uv.lock")
+
+		diff, err := StagedDiffWithSummary()
+		if err != nil {
+			t.Fatalf("StagedDiffWithSummary error: %v", err)
+		}
+
+		// Should contain full diff content (not summarized)
+		if !strings.Contains(diff, "package-version-") {
+			t.Error("expected small lock file to show full diff content")
+		}
+		// Should NOT contain summary marker
+		if strings.Contains(diff, "content omitted") {
+			t.Error("expected small lock file NOT to be summarized")
+		}
+	})
+}
+
+func TestStagedDiffWithSummaryLargeLockFile(t *testing.T) {
+	repo := setupRepo(t)
+	withRepo(t, repo, func() {
+		// Large lock file (above threshold) should be summarized
+		writeLargeLockFile(t, repo, "uv.lock", 300)
+		runGit(t, repo, "add", "uv.lock")
+
+		diff, err := StagedDiffWithSummary()
+		if err != nil {
+			t.Fatalf("StagedDiffWithSummary error: %v", err)
+		}
+
+		// Should contain summary marker
+		if !strings.Contains(diff, "content omitted") {
+			t.Error("expected large lock file to be summarized")
+		}
+		// Should NOT contain full content
+		if strings.Contains(diff, "package-version-") {
+			t.Error("expected large lock file NOT to show full content")
 		}
 	})
 }

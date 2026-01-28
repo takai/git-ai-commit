@@ -20,6 +20,10 @@ var lockFileSuffixes = []string{
 	"-lock.yaml",
 }
 
+// LockFileSummaryThreshold is the minimum number of changed lines
+// before a lock file diff is summarized instead of shown in full.
+const LockFileSummaryThreshold = 200
+
 func IsLockFile(filename string) bool {
 	base := filepath.Base(filename)
 
@@ -87,23 +91,29 @@ func StagedDiffWithSummary() (string, error) {
 	}
 
 	stats := ParseNumstat(numstatOut.String())
-	lockFiles := make(map[string]FileStat)
+
+	// Identify large lock files that should be summarized
+	largeLockFiles := make(map[string]FileStat)
 	for _, stat := range stats {
 		if IsLockFile(stat.Filename) {
-			lockFiles[stat.Filename] = stat
+			totalChanges := stat.Added + stat.Deleted
+			if totalChanges >= LockFileSummaryThreshold {
+				largeLockFiles[stat.Filename] = stat
+			}
 		}
 	}
 
-	if len(lockFiles) == 0 {
+	// If no large lock files, return standard diff
+	if len(largeLockFiles) == 0 {
 		return StagedDiff()
 	}
 
 	var result strings.Builder
 
 	for _, stat := range stats {
-		if _, isLock := lockFiles[stat.Filename]; isLock {
+		if lockStat, isLargeLock := largeLockFiles[stat.Filename]; isLargeLock {
 			result.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", stat.Filename, stat.Filename))
-			result.WriteString(fmt.Sprintf("[Lock file: +%d -%d lines, content omitted]\n\n", stat.Added, stat.Deleted))
+			result.WriteString(fmt.Sprintf("[Lock file: +%d -%d lines, content omitted]\n\n", lockStat.Added, lockStat.Deleted))
 		} else {
 			fileDiff, err := stagedDiffForFile(stat.Filename)
 			if err != nil {

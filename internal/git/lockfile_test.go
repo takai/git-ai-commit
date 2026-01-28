@@ -145,3 +145,56 @@ func writeLargeLockFile(t *testing.T, repo, name string, lines int) {
 	}
 	writeFile(t, repo, name, content.String())
 }
+
+func TestStagedDiffWithSummaryOnlyLockFile(t *testing.T) {
+	repo := setupRepo(t)
+	withRepo(t, repo, func() {
+		// Only stage a lock file
+		writeLargeLockFile(t, repo, "package-lock.json", 50)
+		runGit(t, repo, "add", "package-lock.json")
+
+		diff, err := StagedDiffWithSummary()
+		if err != nil {
+			t.Fatalf("StagedDiffWithSummary error: %v", err)
+		}
+
+		// Should contain summary
+		if !strings.Contains(diff, "package-lock.json") {
+			t.Error("expected diff to mention package-lock.json")
+		}
+		if !strings.Contains(diff, "Lock file") {
+			t.Error("expected diff to contain lock file summary marker")
+		}
+		// Should NOT contain actual content
+		if strings.Contains(diff, "package-version-") {
+			t.Error("expected diff NOT to contain lock file content")
+		}
+	})
+}
+
+func TestStagedDiffWithSummaryNoLockFiles(t *testing.T) {
+	repo := setupRepo(t)
+	withRepo(t, repo, func() {
+		// Only regular files
+		writeFile(t, repo, "main.go", "package main\n")
+		writeFile(t, repo, "util.go", "package util\n")
+		runGit(t, repo, "add", "main.go", "util.go")
+
+		diff, err := StagedDiffWithSummary()
+		if err != nil {
+			t.Fatalf("StagedDiffWithSummary error: %v", err)
+		}
+
+		// Should contain full diff
+		if !strings.Contains(diff, "package main") {
+			t.Error("expected diff to contain main.go content")
+		}
+		if !strings.Contains(diff, "package util") {
+			t.Error("expected diff to contain util.go content")
+		}
+		// Should NOT contain lock file marker
+		if strings.Contains(diff, "Lock file") {
+			t.Error("expected diff NOT to contain lock file marker")
+		}
+	})
+}

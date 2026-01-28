@@ -17,10 +17,18 @@ type Config struct {
 	Prompt        string                  `toml:"prompt"`
 	PromptFile    string                  `toml:"prompt_file"`
 	Engines       map[string]EngineConfig `toml:"engines"`
+	Filter        FilterConfig            `toml:"filter"`
 
 	// ResolvedPrompt holds the final prompt text after loading from preset or file.
 	// This is not read from config files directly.
 	ResolvedPrompt string `toml:"-"`
+}
+
+// FilterConfig holds diff filtering configuration.
+type FilterConfig struct {
+	MaxFileLines           int      `toml:"max_file_lines"`            // Max lines per file (0 = use default)
+	DefaultExcludePatterns []string `toml:"default_exclude_patterns"`  // Override built-in defaults
+	ExcludePatterns        []string `toml:"exclude_patterns"`          // Additional patterns to exclude
 }
 
 // rawConfig is the TOML structure used to detect mutual exclusivity in a single layer.
@@ -29,6 +37,7 @@ type rawConfig struct {
 	Prompt        string                  `toml:"prompt"`
 	PromptFile    string                  `toml:"prompt_file"`
 	Engines       map[string]EngineConfig `toml:"engines"`
+	Filter        FilterConfig            `toml:"filter"`
 }
 
 type EngineConfig struct {
@@ -129,6 +138,16 @@ func Load() (Config, error) {
 					cfg.Engines[name] = ec
 				}
 			}
+			// Merge filter config from repo
+			if repoCfg.Filter.MaxFileLines != 0 {
+				cfg.Filter.MaxFileLines = repoCfg.Filter.MaxFileLines
+			}
+			if len(repoCfg.Filter.DefaultExcludePatterns) > 0 {
+				cfg.Filter.DefaultExcludePatterns = repoCfg.Filter.DefaultExcludePatterns
+			}
+			if len(repoCfg.Filter.ExcludePatterns) > 0 {
+				cfg.Filter.ExcludePatterns = append(cfg.Filter.ExcludePatterns, repoCfg.Filter.ExcludePatterns...)
+			}
 		}
 	}
 
@@ -180,6 +199,16 @@ func loadConfigLayer(data []byte, cfg *Config, source string) error {
 		for name, ec := range raw.Engines {
 			cfg.Engines[name] = ec
 		}
+	}
+	// Merge filter config
+	if raw.Filter.MaxFileLines != 0 {
+		cfg.Filter.MaxFileLines = raw.Filter.MaxFileLines
+	}
+	if len(raw.Filter.DefaultExcludePatterns) > 0 {
+		cfg.Filter.DefaultExcludePatterns = raw.Filter.DefaultExcludePatterns
+	}
+	if len(raw.Filter.ExcludePatterns) > 0 {
+		cfg.Filter.ExcludePatterns = append(cfg.Filter.ExcludePatterns, raw.Filter.ExcludePatterns...)
 	}
 	return nil
 }

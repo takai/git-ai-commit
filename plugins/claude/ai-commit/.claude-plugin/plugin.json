@@ -4,5 +4,6 @@
   "version": "0.1.0",
   "author": {
     "name": "Naoto Takai"
-  }
+  },
+  "repository": "https://github.com/takai/git-ai-commit"
 }

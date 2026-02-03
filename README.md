@@ -46,6 +46,7 @@ Common options:
 - `--amend` Amend the previous commit
 - `-a`, `--all` Stage modified and deleted files before generating the message
 - `-i`, `--include VALUE` Stage specific files before generating the message
+- `-x`, `--exclude VALUE` Hide specific files from the diff for message generation
 - `--debug-prompt` Print the prompt before executing the engine
 - `--debug-command` Print the engine command before execution
 - `-h`, `--help` Show help

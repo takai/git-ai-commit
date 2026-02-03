@@ -311,6 +311,153 @@ func TestMatchPattern_DoubleStarGlob(t *testing.T) {
 	}
 }
 
+func TestFilter_ExcludeFilesByExactPath(t *testing.T) {
+	diff := `diff --git a/go.sum b/go.sum
+index abc123..def456 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,3 +1,4 @@
++module v1.0.0 h1:abc=
+diff --git a/main.go b/main.go
+index abc123..def456 100644
+--- a/main.go
++++ b/main.go
+@@ -1,3 +1,4 @@
++code
+`
+	result := Filter(diff, Options{
+		ExcludeFiles: []string{"go.sum"},
+	})
+
+	if len(result.ExcludedFiles) != 1 || result.ExcludedFiles[0] != "go.sum" {
+		t.Errorf("expected excluded file 'go.sum', got %v", result.ExcludedFiles)
+	}
+	if strings.Contains(result.Diff, "go.sum") {
+		t.Error("expected go.sum to be excluded from diff")
+	}
+	if !strings.Contains(result.Diff, "main.go") {
+		t.Error("expected main.go to be in diff")
+	}
+}
+
+func TestFilter_ExcludeFilesMultiple(t *testing.T) {
+	diff := `diff --git a/go.sum b/go.sum
+index abc123..def456 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,3 +1,4 @@
++sum content
+diff --git a/main.go b/main.go
+index abc123..def456 100644
+--- a/main.go
++++ b/main.go
+@@ -1,3 +1,4 @@
++code
+diff --git a/vendor/deps.go b/vendor/deps.go
+index abc123..def456 100644
+--- a/vendor/deps.go
++++ b/vendor/deps.go
+@@ -1,3 +1,4 @@
++deps
+`
+	result := Filter(diff, Options{
+		ExcludeFiles: []string{"go.sum", "vendor/deps.go"},
+	})
+
+	if len(result.ExcludedFiles) != 2 {
+		t.Errorf("expected 2 excluded files, got %v", result.ExcludedFiles)
+	}
+	if strings.Contains(result.Diff, "go.sum") {
+		t.Error("expected go.sum to be excluded from diff")
+	}
+	if strings.Contains(result.Diff, "vendor/deps.go") {
+		t.Error("expected vendor/deps.go to be excluded from diff")
+	}
+	if !strings.Contains(result.Diff, "main.go") {
+		t.Error("expected main.go to be in diff")
+	}
+}
+
+func TestFilter_ExcludeFilesNoMatch(t *testing.T) {
+	diff := `diff --git a/main.go b/main.go
+index abc123..def456 100644
+--- a/main.go
++++ b/main.go
+@@ -1,3 +1,4 @@
++code
+`
+	result := Filter(diff, Options{
+		ExcludeFiles: []string{"nonexistent.go"},
+	})
+
+	if len(result.ExcludedFiles) != 0 {
+		t.Errorf("expected no excluded files, got %v", result.ExcludedFiles)
+	}
+	if !strings.Contains(result.Diff, "main.go") {
+		t.Error("expected main.go to be in diff")
+	}
+}
+
+func TestFilter_ExcludeFilesCombinedWithPatterns(t *testing.T) {
+	diff := `diff --git a/go.sum b/go.sum
+index abc123..def456 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,3 +1,4 @@
++sum content
+diff --git a/package-lock.json b/package-lock.json
+index abc123..def456 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,3 +1,4 @@
++lock content
+diff --git a/main.go b/main.go
+index abc123..def456 100644
+--- a/main.go
++++ b/main.go
+@@ -1,3 +1,4 @@
++code
+`
+	result := Filter(diff, Options{
+		ExcludeFiles:    []string{"go.sum"},
+		ExcludePatterns: []string{"**/*-lock.json"},
+	})
+
+	if len(result.ExcludedFiles) != 2 {
+		t.Errorf("expected 2 excluded files, got %v", result.ExcludedFiles)
+	}
+	if strings.Contains(result.Diff, "go.sum") {
+		t.Error("expected go.sum to be excluded from diff")
+	}
+	if strings.Contains(result.Diff, "package-lock.json") {
+		t.Error("expected package-lock.json to be excluded from diff")
+	}
+	if !strings.Contains(result.Diff, "main.go") {
+		t.Error("expected main.go to be in diff")
+	}
+}
+
+func TestContainsFile(t *testing.T) {
+	tests := []struct {
+		filePath string
+		files    []string
+		want     bool
+	}{
+		{"go.sum", []string{"go.sum"}, true},
+		{"vendor/deps.go", []string{"vendor/deps.go"}, true},
+		{"main.go", []string{"go.sum", "vendor/deps.go"}, false},
+		{"go.sum", []string{}, false},
+		{"go.sum", nil, false},
+	}
+
+	for _, tt := range tests {
+		got := containsFile(tt.filePath, tt.files)
+		if got != tt.want {
+			t.Errorf("containsFile(%q, %v) = %v, want %v", tt.filePath, tt.files, got, tt.want)
+		}
+	}
+}
+
 func TestExtractFilePath(t *testing.T) {
 	tests := []struct {
 		line string

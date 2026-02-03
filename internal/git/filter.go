@@ -29,6 +29,7 @@ func DefaultExcludePatterns() []string {
 type Options struct {
 	MaxFileLines    int      // Maximum lines per file (0 = no limit)
 	ExcludePatterns []string // Glob patterns for files to exclude
+	ExcludeFiles    []string // Exact file paths to exclude
 }
 
 // Result holds the filtering outcome.
@@ -62,6 +63,12 @@ func Filter(diff string, opts Options) Result {
 
 	for _, fileName := range fileNames {
 		content := files[fileName]
+
+		// Check exact file exclusions
+		if containsFile(fileName, opts.ExcludeFiles) {
+			result.ExcludedFiles = append(result.ExcludedFiles, fileName)
+			continue
+		}
 
 		// Check exclusion patterns
 		if matchesAnyPattern(fileName, opts.ExcludePatterns) {
@@ -210,6 +217,16 @@ func truncateFileDiff(content string, maxLines int, fileName string) (bool, stri
 	result.WriteString(fmt.Sprintf("\n... [%s truncated: showing %d of %d lines]\n", fileName, maxLines, diffLineCount))
 
 	return true, result.String()
+}
+
+// containsFile checks if filePath is in the given list of exact paths.
+func containsFile(filePath string, files []string) bool {
+	for _, f := range files {
+		if f == filePath {
+			return true
+		}
+	}
+	return false
 }
 
 // matchesAnyPattern checks if the file path matches any of the glob patterns.

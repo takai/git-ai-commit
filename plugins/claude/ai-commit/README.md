@@ -26,7 +26,7 @@ ln -s /path/to/git-ai-commit/plugins/claude/ai-commit ~/.claude/plugins/ai-commi
 In any git repository with Claude Code, run:
 
 ```
-/ai-commit:organize-commits
+/ai-commit:organize
 ```
 
 The plugin will:
@@ -37,7 +37,22 @@ The plugin will:
 
 ## Commands
 
-### `/ai-commit:organize-commits`
+### `/ai-commit:staged`
+
+Commits only the currently staged changes. The command:
+
+- Works exclusively with already staged changes
+- Does not stage, unstage, or modify any files
+- Invokes `git ai-commit` to generate the commit message automatically
+
+### `/ai-commit:all`
+
+Stages all pending changes and commits them as a single commit. The command:
+
+- Stages all tracked and untracked changes with `git add -A`
+- Invokes `git ai-commit` to generate the commit message automatically
+
+### `/ai-commit:organize`
 
 Organizes pending changes into multiple atomic commits. The command:
 
@@ -45,21 +60,6 @@ Organizes pending changes into multiple atomic commits. The command:
 - Groups related changes together
 - Stages files for each logical unit
 - Invokes `git ai-commit` to generate commit messages automatically
-
-### `/ai-commit:commit-all`
-
-Stages all pending changes and commits them as a single commit. The command:
-
-- Stages all tracked and untracked changes with `git add -A`
-- Invokes `git ai-commit` to generate the commit message automatically
-
-### `/ai-commit:commit-staged`
-
-Commits only the currently staged changes. The command:
-
-- Works exclusively with already staged changes
-- Does not stage, unstage, or modify any files
-- Invokes `git ai-commit` to generate the commit message automatically
 
 ## License
 

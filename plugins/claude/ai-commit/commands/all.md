@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git ai-commit:*)
 context: fork
-description: Stage all changes and commit using git-ai-commit
+description: Stage and commit all changes using git-ai-commit
 argument-hint: ""
 ---
 

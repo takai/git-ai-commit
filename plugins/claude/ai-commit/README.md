@@ -9,10 +9,16 @@ A Claude Code plugin that organizes git changes into atomic, logical commits usi
 
 ## Installation
 
-Clone this repository into your Claude Code plugins directory:
+If you installed `git-ai-commit` via `go install`, the plugin is already available at `plugins/claude/ai-commit/` inside the source tree.
+
+To register it with Claude Code, add the plugin directory to your project or global settings:
 
 ```bash
-git clone https://github.com/takai/git-ai-commit-plugin ~/.claude/plugins/git-ai-commit-plugin
+# If you have the git-ai-commit source cloned
+claude --plugin-dir /path/to/git-ai-commit/plugins/claude/ai-commit
+
+# Or symlink into your plugins directory
+ln -s /path/to/git-ai-commit/plugins/claude/ai-commit ~/.claude/plugins/ai-commit
 ```
 
 ## Usage
@@ -37,7 +43,7 @@ Organizes pending changes into multiple atomic commits. The command:
 
 - Examines current git status and diffs
 - Groups related changes together
-- Stages files/hunks for each logical unit
+- Stages files for each logical unit
 - Invokes `git ai-commit` to generate commit messages automatically
 
 ### `/ai-commit:commit-staged`

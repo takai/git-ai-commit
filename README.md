@@ -166,8 +166,9 @@ If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you ca
 
 ### Commands
 
-- `/ai-commit:organize-commits` - Analyzes all changes and organizes them into atomic commits
-- `/ai-commit:commit-staged` - Commits only the currently staged changes
+- `/ai-commit:staged` - Commits only the currently staged changes
+- `/ai-commit:all` - Stages all pending changes and commits as a single commit
+- `/ai-commit:organize` - Organizes pending changes into multiple atomic commits
 
 ## Acknowledgements
 

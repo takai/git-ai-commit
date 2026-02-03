@@ -9,10 +9,16 @@ A Claude Code plugin that organizes git changes into atomic, logical commits usi
 
 ## Installation
 
-Clone this repository into your Claude Code plugins directory:
+If you installed `git-ai-commit` via `go install`, the plugin is already available at `plugins/claude/ai-commit/` inside the source tree.
+
+To register it with Claude Code, add the plugin directory to your project or global settings:
 
 ```bash
-git clone https://github.com/takai/git-ai-commit-plugin ~/.claude/plugins/git-ai-commit-plugin
+# If you have the git-ai-commit source cloned
+claude --plugin-dir /path/to/git-ai-commit/plugins/claude/ai-commit
+
+# Or symlink into your plugins directory
+ln -s /path/to/git-ai-commit/plugins/claude/ai-commit ~/.claude/plugins/ai-commit
 ```
 
 ## Usage
@@ -20,7 +26,7 @@ git clone https://github.com/takai/git-ai-commit-plugin ~/.claude/plugins/git-ai
 In any git repository with Claude Code, run:
 
 ```
-/ai-commit:organize-commits
+/ai-commit:organize
 ```
 
 The plugin will:
@@ -31,22 +37,29 @@ The plugin will:
 
 ## Commands
 
-### `/ai-commit:organize-commits`
-
-Organizes pending changes into multiple atomic commits. The command:
-
-- Examines current git status and diffs
-- Groups related changes together
-- Stages files/hunks for each logical unit
-- Invokes `git ai-commit` to generate commit messages automatically
-
-### `/ai-commit:commit-staged`
+### `/ai-commit:staged`
 
 Commits only the currently staged changes. The command:
 
 - Works exclusively with already staged changes
 - Does not stage, unstage, or modify any files
 - Invokes `git ai-commit` to generate the commit message automatically
+
+### `/ai-commit:all`
+
+Stages all pending changes and commits them as a single commit. The command:
+
+- Stages all tracked and untracked changes with `git add -A`
+- Invokes `git ai-commit` to generate the commit message automatically
+
+### `/ai-commit:organize`
+
+Organizes pending changes into multiple atomic commits. The command:
+
+- Examines current git status and diffs
+- Groups related changes together
+- Stages files for each logical unit
+- Invokes `git ai-commit` to generate commit messages automatically
 
 ## License
 

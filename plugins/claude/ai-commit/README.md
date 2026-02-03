@@ -46,6 +46,13 @@ Organizes pending changes into multiple atomic commits. The command:
 - Stages files for each logical unit
 - Invokes `git ai-commit` to generate commit messages automatically
 
+### `/ai-commit:commit-all`
+
+Stages all pending changes and commits them as a single commit. The command:
+
+- Stages all tracked and untracked changes with `git add -A`
+- Invokes `git ai-commit` to generate the commit message automatically
+
 ### `/ai-commit:commit-staged`
 
 Commits only the currently staged changes. The command:

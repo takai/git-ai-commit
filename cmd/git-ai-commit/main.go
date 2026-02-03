@@ -23,6 +23,7 @@ type options struct {
 	amend        bool
 	addAll       bool
 	includeFiles []string
+	excludeFiles []string
 	debugPrompt  bool
 	debugCommand bool
 }
@@ -51,6 +52,7 @@ func main() {
 		opts.amend,
 		opts.addAll,
 		opts.includeFiles,
+		opts.excludeFiles,
 		opts.debugPrompt,
 		opts.debugCommand,
 	); err != nil {
@@ -76,7 +78,7 @@ func parseArgs(args []string) (options, error) {
 				return opts, errHelp
 			case "version":
 				return opts, errVersion
-			case "context", "context-file", "prompt", "prompt-file", "engine", "include":
+			case "context", "context-file", "prompt", "prompt-file", "engine", "include", "exclude":
 				if !hasValue {
 					if i+1 >= len(args) {
 						return opts, fmt.Errorf("missing value for --%s", name)
@@ -132,6 +134,11 @@ func applyLongOption(opts *options, name, value string) error {
 			return fmt.Errorf("missing value for --include")
 		}
 		opts.includeFiles = append(opts.includeFiles, value)
+	case "exclude":
+		if value == "" {
+			return fmt.Errorf("missing value for --exclude")
+		}
+		opts.excludeFiles = append(opts.excludeFiles, value)
 	default:
 		return fmt.Errorf("unknown option --%s", name)
 	}
@@ -167,6 +174,26 @@ func parseShortOptions(opts *options, arg string, args []string, index *int) err
 				return fmt.Errorf("missing value for -i")
 			}
 			opts.includeFiles = append(opts.includeFiles, value)
+		case 'x':
+			value := ""
+			if i+1 < len(cluster) {
+				if cluster[i+1] == '=' {
+					value = cluster[i+2:]
+				} else {
+					value = cluster[i+1:]
+				}
+				i = len(cluster)
+			} else {
+				if *index+1 >= len(args) {
+					return fmt.Errorf("missing value for -x")
+				}
+				*index++
+				value = args[*index]
+			}
+			if value == "" {
+				return fmt.Errorf("missing value for -x")
+			}
+			opts.excludeFiles = append(opts.excludeFiles, value)
 		case 'h':
 			return errHelp
 		default:
@@ -189,6 +216,7 @@ func printUsage(out *os.File) {
 	fmt.Fprintln(out, "  --amend                   Amend the previous commit")
 	fmt.Fprintln(out, "  -a, --all                 Stage modified and deleted files before generating the message")
 	fmt.Fprintln(out, "  -i, --include VALUE       Stage specific files before generating the message")
+	fmt.Fprintln(out, "  -x, --exclude VALUE       Hide specific files from the diff for message generation")
 	fmt.Fprintln(out, "  --debug-prompt            Print the prompt before executing the engine")
 	fmt.Fprintln(out, "  --debug-command           Print the engine command before execution")
 	fmt.Fprintln(out, "  -h, --help                Show help")

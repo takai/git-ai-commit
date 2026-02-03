@@ -11,7 +11,7 @@ import (
 	"git-ai-commit/internal/prompt"
 )
 
-func Run(context, contextFile, promptName, promptFile, engineName string, amend, addAll bool, includeFiles []string, debugPrompt, debugCommand bool) (err error) {
+func Run(context, contextFile, promptName, promptFile, engineName string, amend, addAll bool, includeFiles, excludeFiles []string, debugPrompt, debugCommand bool) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func Run(context, contextFile, promptName, promptFile, engineName string, amend,
 		}
 	}
 
-	diff, err := commitDiff(amend, cfg)
+	diff, err := commitDiff(amend, cfg, excludeFiles)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func sanitizeMessage(message string) string {
 	return clean
 }
 
-func commitDiff(amend bool, cfg config.Config) (string, error) {
+func commitDiff(amend bool, cfg config.Config, excludeFiles []string) (string, error) {
 	var diff string
 	var err error
 	if amend {
@@ -169,6 +169,7 @@ func commitDiff(amend bool, cfg config.Config) (string, error) {
 	opts := git.Options{
 		MaxFileLines:    maxLines,
 		ExcludePatterns: patterns,
+		ExcludeFiles:    excludeFiles,
 	}
 	result := git.Filter(diff, opts)
 

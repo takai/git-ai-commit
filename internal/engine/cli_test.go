@@ -23,3 +23,18 @@ func TestCLIGenerateUsesPromptArg(t *testing.T) {
 		t.Fatalf("output = %q", out)
 	}
 }
+
+func TestCLIGenerateUnsetsClaudeCodeEnv(t *testing.T) {
+	t.Setenv("CLAUDECODE", "1")
+	cli := CLI{
+		Command: "/bin/sh",
+		Args:    []string{"-c", "printf %s \"$CLAUDECODE\""},
+	}
+	out, err := cli.Generate("ignored")
+	if err != nil {
+		t.Fatalf("Generate error: %v", err)
+	}
+	if out != "" {
+		t.Fatalf("output = %q", out)
+	}
+}

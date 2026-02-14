@@ -3,6 +3,7 @@ package engine
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -23,6 +24,7 @@ func (c CLI) Generate(prompt string) (string, error) {
 		}
 	}
 	cmd := exec.Command(c.Command, args...)
+	cmd.Env = filteredEnv(os.Environ(), "CLAUDECODE")
 	if !usePromptArg {
 		cmd.Stdin = strings.NewReader(prompt)
 	}
@@ -34,4 +36,23 @@ func (c CLI) Generate(prompt string) (string, error) {
 		return "", fmt.Errorf("engine command failed: %v: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return stdout.String(), nil
+}
+
+func filteredEnv(env []string, names ...string) []string {
+	if len(names) == 0 {
+		return env
+	}
+	blocked := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		blocked[name] = struct{}{}
+	}
+	out := make([]string, 0, len(env))
+	for _, entry := range env {
+		key, _, _ := strings.Cut(entry, "=")
+		if _, skip := blocked[key]; skip {
+			continue
+		}
+		out = append(out, entry)
+	}
+	return out
 }

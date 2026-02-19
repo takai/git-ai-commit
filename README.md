@@ -12,8 +12,7 @@ Package managers:
 Homebrew:
 
 ```sh
-brew tap takai/tap
-brew install git-ai-commit
+brew install takai/tap/git-ai-commit
 ```
 
 mise:

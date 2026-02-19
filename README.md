@@ -88,6 +88,12 @@ Supported engines:
 - `gemini`
 - `codex`
 
+Built-in defaults are applied when `engines.<name>.args` is not set.
+For `claude`, defaults include:
+
+- `-p --model haiku`
+- `--settings "{\"attribution\":{\"commit\":\"\",\"pr\":\"\"}}"` (prevents automatic `Co-authored-by` metadata)
+
 If no engine is configured, auto-detection tries commands in this order: `claude` → `gemini` → `codex`. The first available command is used.
 
 Any other engine name is treated as a direct command and executed with the prompt on stdin.

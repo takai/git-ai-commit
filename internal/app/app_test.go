@@ -29,7 +29,7 @@ func TestSelectEngineClaudeDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("selectEngine error: %v", err)
 	}
-	if command != "claude -p --model haiku" {
+	if command != "claude -p --model haiku --settings {\"attribution\":{\"commit\":\"\",\"pr\":\"\"}}" {
 		t.Fatalf("command = %q", command)
 	}
 }

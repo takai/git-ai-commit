@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -101,15 +102,10 @@ func CommitWithMessage(message string, amend bool) error {
 	}
 	cmd := exec.Command("git", args...)
 	cmd.Stdin = strings.NewReader(message)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git commit failed: %v: %s", err, strings.TrimSpace(stderr.String()))
-	}
-	if out := strings.TrimSpace(stdout.String()); out != "" {
-		fmt.Println(out)
+		return fmt.Errorf("git commit failed: %v", err)
 	}
 	return nil
 }

@@ -73,3 +73,36 @@ func TestParseArgs_ExcludeShortCluster(t *testing.T) {
 		t.Errorf("expected excludeFiles=[go.sum], got %v", opts.excludeFiles)
 	}
 }
+
+func TestParseArgs_EditLong(t *testing.T) {
+	opts, err := parseArgs([]string{"--edit"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.edit {
+		t.Error("expected edit to be true")
+	}
+}
+
+func TestParseArgs_EditShort(t *testing.T) {
+	opts, err := parseArgs([]string{"-e"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.edit {
+		t.Error("expected edit to be true")
+	}
+}
+
+func TestParseArgs_EditShortCluster(t *testing.T) {
+	opts, err := parseArgs([]string{"-ae"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.addAll {
+		t.Error("expected addAll to be true")
+	}
+	if !opts.edit {
+		t.Error("expected edit to be true")
+	}
+}

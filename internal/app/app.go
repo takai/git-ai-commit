@@ -11,7 +11,7 @@ import (
 	"git-ai-commit/internal/prompt"
 )
 
-func Run(context, contextFile, promptName, promptFile, engineName string, amend, addAll bool, includeFiles, excludeFiles []string, debugPrompt, debugCommand bool) (err error) {
+func Run(context, contextFile, promptName, promptFile, engineName string, amend, addAll, edit bool, includeFiles, excludeFiles []string, debugPrompt, debugCommand bool) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func Run(context, contextFile, promptName, promptFile, engineName string, amend,
 		return fmt.Errorf("empty commit message from engine")
 	}
 
-	if err := git.CommitWithMessage(message, amend); err != nil {
+	if err := git.CommitWithMessage(message, amend, edit); err != nil {
 		return err
 	}
 	return nil

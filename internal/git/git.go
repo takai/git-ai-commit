@@ -95,13 +95,45 @@ func HasHeadCommit() (bool, error) {
 	return true, nil
 }
 
-func CommitWithMessage(message string, amend bool) error {
+func CommitWithMessage(message string, amend, edit bool) error {
+	if edit {
+		return commitWithEdit(message, amend)
+	}
 	args := []string{"commit", "-F", "-"}
 	if amend {
 		args = append(args, "--amend")
 	}
 	cmd := exec.Command("git", args...)
 	cmd.Stdin = strings.NewReader(message)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git commit failed: %v", err)
+	}
+	return nil
+}
+
+func commitWithEdit(message string, amend bool) error {
+	f, err := os.CreateTemp("", "git-ai-commit-*.txt")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(f.Name())
+
+	if _, err := f.WriteString(message); err != nil {
+		f.Close()
+		return fmt.Errorf("failed to write temp file: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %v", err)
+	}
+
+	args := []string{"commit", "--edit", "-F", f.Name()}
+	if amend {
+		args = append(args, "--amend")
+	}
+	cmd := exec.Command("git", args...)
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

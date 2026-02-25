@@ -22,6 +22,7 @@ type options struct {
 	engine       string
 	amend        bool
 	addAll       bool
+	edit         bool
 	includeFiles []string
 	excludeFiles []string
 	debugPrompt  bool
@@ -51,6 +52,7 @@ func main() {
 		opts.engine,
 		opts.amend,
 		opts.addAll,
+		opts.edit,
 		opts.includeFiles,
 		opts.excludeFiles,
 		opts.debugPrompt,
@@ -91,6 +93,8 @@ func parseArgs(args []string) (options, error) {
 				}
 			case "amend":
 				opts.amend = true
+			case "edit":
+				opts.edit = true
 			case "all":
 				opts.addAll = true
 			case "debug-prompt":
@@ -194,6 +198,8 @@ func parseShortOptions(opts *options, arg string, args []string, index *int) err
 				return fmt.Errorf("missing value for -x")
 			}
 			opts.excludeFiles = append(opts.excludeFiles, value)
+		case 'e':
+			opts.edit = true
 		case 'h':
 			return errHelp
 		default:
@@ -214,6 +220,7 @@ func printUsage(out *os.File) {
 	fmt.Fprintln(out, "  --prompt-file VALUE       Path to a custom prompt file")
 	fmt.Fprintln(out, "  --engine VALUE            LLM engine name override")
 	fmt.Fprintln(out, "  --amend                   Amend the previous commit")
+	fmt.Fprintln(out, "  -e, --edit                Open the generated commit message in an editor before committing")
 	fmt.Fprintln(out, "  -a, --all                 Stage modified and deleted files before generating the message")
 	fmt.Fprintln(out, "  -i, --include VALUE       Stage specific files before generating the message")
 	fmt.Fprintln(out, "  -x, --exclude VALUE       Hide specific files from the diff for message generation")

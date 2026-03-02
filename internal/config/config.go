@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,9 +27,9 @@ type Config struct {
 
 // FilterConfig holds diff filtering configuration.
 type FilterConfig struct {
-	MaxFileLines           int      `toml:"max_file_lines"`            // Max lines per file (0 = use default)
-	DefaultExcludePatterns []string `toml:"default_exclude_patterns"`  // Override built-in defaults
-	ExcludePatterns        []string `toml:"exclude_patterns"`          // Additional patterns to exclude
+	MaxFileLines           int      `toml:"max_file_lines"`           // Max lines per file (0 = use default)
+	DefaultExcludePatterns []string `toml:"default_exclude_patterns"` // Override built-in defaults
+	ExcludePatterns        []string `toml:"exclude_patterns"`         // Additional patterns to exclude
 }
 
 // rawConfig is the TOML structure used to detect mutual exclusivity in a single layer.
@@ -134,9 +135,7 @@ func Load() (Config, error) {
 				if cfg.Engines == nil {
 					cfg.Engines = map[string]EngineConfig{}
 				}
-				for name, ec := range repoCfg.Engines {
-					cfg.Engines[name] = ec
-				}
+				maps.Copy(cfg.Engines, repoCfg.Engines)
 			}
 			// Merge filter config from repo
 			if repoCfg.Filter.MaxFileLines != 0 {
@@ -196,9 +195,7 @@ func loadConfigLayer(data []byte, cfg *Config, source string) error {
 		if cfg.Engines == nil {
 			cfg.Engines = map[string]EngineConfig{}
 		}
-		for name, ec := range raw.Engines {
-			cfg.Engines[name] = ec
-		}
+		maps.Copy(cfg.Engines, raw.Engines)
 	}
 	// Merge filter config
 	if raw.Filter.MaxFileLines != 0 {

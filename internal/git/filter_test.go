@@ -1,6 +1,7 @@
 package git
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -53,7 +54,7 @@ index abc123..def456 100644
 +++ b/large.go
 @@ -1,100 +1,110 @@
 `)
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		sb.WriteString("+new line\n")
 	}
 	diff := sb.String()
@@ -246,7 +247,7 @@ index abc123..def456 100644
 +++ b/large.go
 @@ -1,100 +1,150 @@
 `)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		sb.WriteString("+new line\n")
 	}
 	diff := sb.String()
@@ -270,13 +271,7 @@ func TestDefaultExcludePatterns(t *testing.T) {
 		"**/go.sum",
 	}
 	for _, exp := range expected {
-		found := false
-		for _, p := range patterns {
-			if p == exp {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(patterns, exp)
 		if !found {
 			t.Errorf("expected pattern %q in defaults", exp)
 		}

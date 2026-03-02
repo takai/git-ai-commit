@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -103,7 +104,7 @@ func splitDiffByFile(diff string) map[string]string {
 	var currentContent strings.Builder
 	var inFile bool
 
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		line := lines[i]
 
 		// Detect start of a new file diff
@@ -221,12 +222,7 @@ func truncateFileDiff(content string, maxLines int, fileName string) (bool, stri
 
 // containsFile checks if filePath is in the given list of exact paths.
 func containsFile(filePath string, files []string) bool {
-	for _, f := range files {
-		if f == filePath {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(files, filePath)
 }
 
 // matchesAnyPattern checks if the file path matches any of the glob patterns.

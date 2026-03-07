@@ -69,11 +69,38 @@ func Default() Config {
 
 func Load() (Config, error) {
 	cfg := Default()
-	var promptSource string   // tracks where the final prompt setting came from
-	var promptFilePath string // the path to the config file that set prompt_file
+	var promptFilePath string // resolved path used by resolvePromptFromPath
 	var promptFileRepoRoot string
 
-	// 1. Load user config
+	// Read all git config scopes in a single call.
+	gitScopes, err := readGitConfigScopes()
+	if err != nil {
+		return cfg, err
+	}
+
+	// Determine repo root once (needed for local/worktree promptFile resolution
+	// and for loading the repo TOML).
+	repoRoot, repoPath, err := repoConfigPath()
+	if err != nil {
+		return cfg, err
+	}
+
+	// Determine home directory (needed for global promptFile resolution).
+	homeDir, _ := os.UserHomeDir()
+
+	// 1. System git config (lowest priority)
+	if err := applyGitConfigScope(&cfg, gitScopes.system, "system git config", ""); err != nil {
+		return cfg, err
+	}
+	promptFilePath, promptFileRepoRoot = gitScopePromptPaths(gitScopes.system, promptFilePath, promptFileRepoRoot, cfg)
+
+	// 2. Global git config
+	if err := applyGitConfigScope(&cfg, gitScopes.global, "user git config", homeDir); err != nil {
+		return cfg, err
+	}
+	promptFilePath, promptFileRepoRoot = gitScopePromptPaths(gitScopes.global, promptFilePath, promptFileRepoRoot, cfg)
+
+	// 3. User TOML config
 	userPath, err := configPath()
 	if err != nil {
 		return cfg, err
@@ -83,23 +110,17 @@ func Load() (Config, error) {
 			return cfg, err
 		}
 		if cfg.PromptFile != "" {
-			promptSource = "user"
 			promptFilePath = userPath
-			if _, err := loadPromptFile(cfg.PromptFile, promptFilePath, ""); err != nil {
-				return cfg, err
-			}
+			promptFileRepoRoot = ""
 		} else if cfg.Prompt != "" {
-			promptSource = "user"
+			promptFilePath = ""
+			promptFileRepoRoot = ""
 		}
 	} else if !os.IsNotExist(err) {
 		return cfg, fmt.Errorf("read user config: %w", err)
 	}
 
-	// 2. Load repo config (merges on top of user config)
-	repoRoot, repoPath, err := repoConfigPath()
-	if err != nil {
-		return cfg, err
-	}
+	// 4. Repo TOML config
 	if repoPath != "" {
 		data, trusted, err := loadTrustedRepoConfig(repoRoot, repoPath)
 		if err != nil {
@@ -113,21 +134,18 @@ func Load() (Config, error) {
 			if err := validatePromptExclusivity(repoCfg.Prompt, repoCfg.PromptFile, "repo config"); err != nil {
 				return cfg, err
 			}
-			// Merge repo config into cfg
 			if repoCfg.DefaultEngine != "" {
 				cfg.DefaultEngine = repoCfg.DefaultEngine
 			}
 			if repoCfg.Prompt != "" {
 				cfg.Prompt = repoCfg.Prompt
 				cfg.PromptFile = ""
-				promptSource = "repo"
 				promptFilePath = ""
 				promptFileRepoRoot = ""
 			}
 			if repoCfg.PromptFile != "" {
 				cfg.PromptFile = repoCfg.PromptFile
 				cfg.Prompt = ""
-				promptSource = "repo"
 				promptFilePath = repoPath
 				promptFileRepoRoot = repoRoot
 			}
@@ -137,7 +155,6 @@ func Load() (Config, error) {
 				}
 				maps.Copy(cfg.Engines, repoCfg.Engines)
 			}
-			// Merge filter config from repo
 			if repoCfg.Filter.MaxFileLines != 0 {
 				cfg.Filter.MaxFileLines = repoCfg.Filter.MaxFileLines
 			}
@@ -150,23 +167,35 @@ func Load() (Config, error) {
 		}
 	}
 
-	// 3. Auto-detect engine if still empty
+	// 5. Local git config (overrides repo TOML)
+	localPromptFileBase := repoRoot // may be "" if not in a repo
+	if err := applyGitConfigScope(&cfg, gitScopes.local, "repo git config", localPromptFileBase); err != nil {
+		return cfg, err
+	}
+	promptFilePath, promptFileRepoRoot = gitScopePromptPaths(gitScopes.local, promptFilePath, promptFileRepoRoot, cfg)
+
+	// 6. Worktree git config (highest git config priority)
+	if err := applyGitConfigScope(&cfg, gitScopes.worktree, "worktree git config", localPromptFileBase); err != nil {
+		return cfg, err
+	}
+	promptFilePath, promptFileRepoRoot = gitScopePromptPaths(gitScopes.worktree, promptFilePath, promptFileRepoRoot, cfg)
+
+	// 7. Auto-detect engine if still empty
 	if strings.TrimSpace(cfg.DefaultEngine) == "" {
 		if auto := autodetectEngine(); auto != "" {
 			cfg.DefaultEngine = auto
 		}
 	}
 
-	// 4. Ensure Engines map is initialized
+	// 8. Ensure Engines map is initialized
 	if cfg.Engines == nil {
 		cfg.Engines = map[string]EngineConfig{}
 	}
 
-	// 5. Resolve prompt from preset or file
-	if err := resolvePrompt(&cfg, promptFilePath, promptFileRepoRoot); err != nil {
+	// 9. Resolve prompt from preset or file.
+	if err := resolvePromptFromPath(&cfg, promptFilePath, promptFileRepoRoot); err != nil {
 		return cfg, err
 	}
-	_ = promptSource // used for debugging if needed
 
 	return cfg, nil
 }
@@ -217,7 +246,7 @@ func validatePromptExclusivity(prompt, promptFile, source string) error {
 	return nil
 }
 
-func resolvePrompt(cfg *Config, promptFilePath, promptFileRepoRoot string) error {
+func resolvePromptFromPath(cfg *Config, promptFilePath, promptFileRepoRoot string) error {
 	// If prompt_file is set, load from file (relative to config file's directory)
 	if strings.TrimSpace(cfg.PromptFile) != "" {
 		promptText, err := loadPromptFile(cfg.PromptFile, promptFilePath, promptFileRepoRoot)
@@ -295,7 +324,7 @@ func repoConfigPath() (string, string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", "", nil
+			return root, "", nil
 		}
 		return "", "", fmt.Errorf("stat repo config: %w", err)
 	}

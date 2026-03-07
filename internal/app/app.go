@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -45,7 +46,7 @@ func Run(context, contextFile, promptName, promptFile, engineName string, amend,
 		}
 	}
 
-	diff, err := commitDiff(amend, cfg, excludeFiles)
+	diff, filterResult, err := commitDiff(amend, cfg, excludeFiles)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func Run(context, contextFile, promptName, promptFile, engineName string, amend,
 
 	output, err := eng.Generate(promptText)
 	if err != nil {
-		return err
+		return buildEngineFailureError(err, filterResult, excludeFiles)
 	}
 	message := sanitizeMessage(output)
 	if message == "" {
@@ -141,7 +142,7 @@ func sanitizeMessage(message string) string {
 	return clean
 }
 
-func commitDiff(amend bool, cfg config.Config, excludeFiles []string) (string, error) {
+func commitDiff(amend bool, cfg config.Config, excludeFiles []string) (string, git.Result, error) {
 	var diff string
 	var err error
 	if amend {
@@ -150,7 +151,7 @@ func commitDiff(amend bool, cfg config.Config, excludeFiles []string) (string, e
 		diff, err = git.StagedDiff()
 	}
 	if err != nil {
-		return "", err
+		return "", git.Result{}, err
 	}
 
 	// Determine exclude patterns
@@ -174,9 +175,9 @@ func commitDiff(amend bool, cfg config.Config, excludeFiles []string) (string, e
 	result := git.Filter(diff, opts)
 
 	if result.Truncated || len(result.ExcludedFiles) > 0 {
-		return result.Diff + formatFilterNotice(result), nil
+		return result.Diff + formatFilterNotice(result), result, nil
 	}
-	return result.Diff, nil
+	return result.Diff, result, nil
 }
 
 func formatFilterNotice(result git.Result) string {
@@ -191,6 +192,83 @@ func formatFilterNotice(result git.Result) string {
 		return ""
 	}
 	return "\n\n[Filter notice: " + strings.Join(parts, "; ") + "]"
+}
+
+// buildEngineFailureError converts an engine error into an actionable user
+// message. If err is an *engine.EngineError, it saves the full stderr to a
+// temp log file and appends an --exclude hint when the filter result contains
+// truncated or pattern-excluded files. Non-EngineError values are returned
+// unchanged.
+func buildEngineFailureError(err error, filterResult git.Result, userExcluded []string) error {
+	var engineErr *engine.EngineError
+	if !errors.As(err, &engineErr) {
+		return err
+	}
+
+	var msg strings.Builder
+	msg.WriteString(engineErr.Error())
+
+	logPath := writeTempLog(engineErr.Stderr)
+	if logPath != "" {
+		msg.WriteString("\nFull engine output saved to: ")
+		msg.WriteString(logPath)
+	}
+
+	candidates := buildExcludeCandidates(filterResult, userExcluded)
+	if len(candidates) > 0 {
+		msg.WriteString("\nHint: the following files were truncated or excluded and may have caused\na context window overflow. Re-run with --exclude to skip them:")
+		const binary = "git ai-commit"
+		padding := strings.Repeat(" ", 2+len(binary)+1)
+		for i, f := range candidates {
+			if i == 0 {
+				msg.WriteString("\n  ")
+				msg.WriteString(binary)
+				msg.WriteString(" --exclude ")
+				msg.WriteString(f)
+			} else {
+				msg.WriteString(" \\\n")
+				msg.WriteString(padding)
+				msg.WriteString("--exclude ")
+				msg.WriteString(f)
+			}
+		}
+	}
+
+	return errors.New(msg.String())
+}
+
+// writeTempLog writes content to a new temp file and returns its path.
+// Returns empty string if the file cannot be created or written.
+func writeTempLog(stderr string) string {
+	content := stderr
+	if strings.TrimSpace(content) == "" {
+		content = "(empty)\n"
+	}
+	f, err := os.CreateTemp("", "git-ai-commit-stderr-*.log")
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	_, _ = f.WriteString(content)
+	return f.Name()
+}
+
+// buildExcludeCandidates returns the list of files to suggest in the
+// --exclude hint: truncated files plus pattern-excluded files that the user
+// has not already explicitly excluded on the current invocation.
+func buildExcludeCandidates(filterResult git.Result, userExcluded []string) []string {
+	excluded := make(map[string]bool, len(userExcluded))
+	for _, f := range userExcluded {
+		excluded[f] = true
+	}
+	candidates := make([]string, 0, len(filterResult.TruncatedFiles)+len(filterResult.ExcludedFiles))
+	candidates = append(candidates, filterResult.TruncatedFiles...)
+	for _, f := range filterResult.ExcludedFiles {
+		if !excluded[f] {
+			candidates = append(candidates, f)
+		}
+	}
+	return candidates
 }
 
 func stageChanges(addAll bool, includeFiles []string) (func(), error) {

@@ -1,10 +1,120 @@
 package app
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	"git-ai-commit/internal/config"
+	"git-ai-commit/internal/engine"
+	"git-ai-commit/internal/git"
 )
+
+func TestBuildEngineFailureErrorNonEngineError(t *testing.T) {
+	plain := errors.New("some other error")
+	result := buildEngineFailureError(plain, git.Result{}, nil)
+	if result != plain {
+		t.Fatalf("expected original error to be returned unchanged, got %v", result)
+	}
+}
+
+func TestBuildEngineFailureErrorNoHint(t *testing.T) {
+	inner := errors.New("exit status 1")
+	engErr := &engine.EngineError{Err: inner, Stderr: "some stderr output"}
+	result := buildEngineFailureError(engErr, git.Result{}, nil)
+	msg := result.Error()
+
+	if !strings.HasPrefix(msg, "engine command failed: exit status 1") {
+		t.Fatalf("message should start with engine error, got: %q", msg)
+	}
+	if !strings.Contains(msg, "Full engine output saved to:") {
+		t.Fatalf("message should contain log path, got: %q", msg)
+	}
+	if strings.Contains(msg, "Hint:") {
+		t.Fatalf("message should not contain hint when no truncated/excluded files, got: %q", msg)
+	}
+}
+
+func TestBuildEngineFailureErrorWithTruncatedFiles(t *testing.T) {
+	inner := errors.New("exit status 1")
+	engErr := &engine.EngineError{Err: inner, Stderr: ""}
+	filterResult := git.Result{
+		TruncatedFiles: []string{"large.txt"},
+	}
+	result := buildEngineFailureError(engErr, filterResult, nil)
+	msg := result.Error()
+
+	if !strings.Contains(msg, "Hint:") {
+		t.Fatalf("message should contain hint for truncated files, got: %q", msg)
+	}
+	if !strings.Contains(msg, "--exclude large.txt") {
+		t.Fatalf("message should contain --exclude large.txt, got: %q", msg)
+	}
+}
+
+func TestBuildEngineFailureErrorWithExcludedFiles(t *testing.T) {
+	inner := errors.New("exit status 1")
+	engErr := &engine.EngineError{Err: inner, Stderr: ""}
+	filterResult := git.Result{
+		ExcludedFiles: []string{"go.sum", "package-lock.json"},
+	}
+	result := buildEngineFailureError(engErr, filterResult, nil)
+	msg := result.Error()
+
+	if !strings.Contains(msg, "--exclude go.sum") {
+		t.Fatalf("message should contain --exclude go.sum, got: %q", msg)
+	}
+	if !strings.Contains(msg, "--exclude package-lock.json") {
+		t.Fatalf("message should contain --exclude package-lock.json, got: %q", msg)
+	}
+}
+
+func TestBuildEngineFailureErrorSkipsUserExcluded(t *testing.T) {
+	inner := errors.New("exit status 1")
+	engErr := &engine.EngineError{Err: inner, Stderr: ""}
+	filterResult := git.Result{
+		TruncatedFiles: []string{"large.txt"},
+		ExcludedFiles:  []string{"already-excluded.txt"},
+	}
+	result := buildEngineFailureError(engErr, filterResult, []string{"already-excluded.txt"})
+	msg := result.Error()
+
+	if strings.Contains(msg, "--exclude already-excluded.txt") {
+		t.Fatalf("message should not re-list user-excluded file, got: %q", msg)
+	}
+	if !strings.Contains(msg, "--exclude large.txt") {
+		t.Fatalf("message should still contain truncated file hint, got: %q", msg)
+	}
+}
+
+func TestBuildEngineFailureErrorEmptyStderr(t *testing.T) {
+	inner := errors.New("exit status 1")
+	engErr := &engine.EngineError{Err: inner, Stderr: ""}
+	result := buildEngineFailureError(engErr, git.Result{}, nil)
+	msg := result.Error()
+
+	// Even with empty stderr, a log file should be created
+	if !strings.Contains(msg, "Full engine output saved to:") {
+		t.Fatalf("message should contain log path even for empty stderr, got: %q", msg)
+	}
+}
+
+func TestBuildExcludeCandidates(t *testing.T) {
+	filterResult := git.Result{
+		TruncatedFiles: []string{"big.go"},
+		ExcludedFiles:  []string{"go.sum", "user-excluded.txt"},
+	}
+	candidates := buildExcludeCandidates(filterResult, []string{"user-excluded.txt"})
+	if len(candidates) != 2 {
+		t.Fatalf("expected 2 candidates, got %d: %v", len(candidates), candidates)
+	}
+	if candidates[0] != "big.go" {
+		t.Fatalf("first candidate should be big.go, got %q", candidates[0])
+	}
+	if candidates[1] != "go.sum" {
+		t.Fatalf("second candidate should be go.sum, got %q", candidates[1])
+	}
+}
 
 func TestSelectEngineCodexDefault(t *testing.T) {
 	cfg := config.Default()

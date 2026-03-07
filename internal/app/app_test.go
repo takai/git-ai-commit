@@ -139,7 +139,7 @@ func TestSelectEngineClaudeDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("selectEngine error: %v", err)
 	}
-	if command != "claude -p --model haiku --settings {\"attribution\":{\"commit\":\"\",\"pr\":\"\"}}" {
+	if command != "claude -p --model haiku --settings {\"attribution\":{\"commit\":\"\",\"pr\":\"\"}} --no-session-persistence" {
 		t.Fatalf("command = %q", command)
 	}
 }

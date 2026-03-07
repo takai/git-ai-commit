@@ -447,3 +447,36 @@ func TestGitConfigDefaultExcludePatternsHigherScopeWins(t *testing.T) {
 	})
 }
 
+// TestGitConfigPromptFileNoRepoToml verifies that a relative promptFile in
+// local git config resolves from the repo root even when .git-ai-commit.toml
+// is absent (repoConfigPath previously returned an empty root in that case).
+func TestGitConfigPromptFileNoRepoToml(t *testing.T) {
+	repo := initTestRepo(t)
+	isolateGitConfig(t)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// No .git-ai-commit.toml in this repo.
+	promptContent := "Prompt loaded without repo TOML"
+	if err := os.WriteFile(filepath.Join(repo, "prompt.md"), []byte(promptContent), 0o644); err != nil {
+		t.Fatalf("write prompt file: %v", err)
+	}
+
+	setGitConfig(t, repo, "ai-commit.engine", "fake")
+	setGitConfig(t, repo, "ai-commit.promptFile", "prompt.md")
+
+	// Run from a subdirectory to confirm CWD is not used as the base.
+	subdir := filepath.Join(repo, "sub")
+	if err := os.MkdirAll(subdir, 0o755); err != nil {
+		t.Fatalf("mkdir subdir: %v", err)
+	}
+
+	withDir(t, subdir, func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.ResolvedPrompt != promptContent {
+			t.Fatalf("ResolvedPrompt = %q, want %q", cfg.ResolvedPrompt, promptContent)
+		}
+	})
+}

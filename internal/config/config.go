@@ -324,7 +324,7 @@ func repoConfigPath() (string, string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", "", nil
+			return root, "", nil
 		}
 		return "", "", fmt.Errorf("stat repo config: %w", err)
 	}

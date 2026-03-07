@@ -8,6 +8,20 @@ import (
 	"strings"
 )
 
+// EngineError is returned by Generate when the engine subprocess exits with a
+// non-zero status. Stderr holds the full standard error output of the engine
+// process, which may be empty.
+type EngineError struct {
+	Err    error  // the underlying exec error (e.g. *exec.ExitError)
+	Stderr string // full stderr content, possibly empty
+}
+
+func (e *EngineError) Error() string {
+	return fmt.Sprintf("engine command failed: %v", e.Err)
+}
+
+func (e *EngineError) Unwrap() error { return e.Err }
+
 type CLI struct {
 	Command string
 	Args    []string
@@ -33,7 +47,7 @@ func (c CLI) Generate(prompt string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("engine command failed: %v: %s", err, strings.TrimSpace(stderr.String()))
+		return "", &EngineError{Err: err, Stderr: stderr.String()}
 	}
 	return stdout.String(), nil
 }

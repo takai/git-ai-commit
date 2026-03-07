@@ -53,13 +53,23 @@ Common options:
 
 ## Configuration
 
-Configuration is layered, allowing global defaults with per-repository overrides:
+Configuration is layered. Later layers override earlier ones:
 
-1. User config: `~/.config/git-ai-commit/config.toml`
-2. Repo config: `.git-ai-commit.toml` at the repository root
-3. Command-line flags
+| Priority | Source |
+|----------|--------|
+| 1 (lowest) | System git config (`/etc/gitconfig`) |
+| 2 | Global git config (`~/.gitconfig`) |
+| 3 | User TOML (`~/.config/git-ai-commit/config.toml`) |
+| 4 | Repo TOML (`.git-ai-commit.toml` at repo root) |
+| 5 | Local git config (`.git/config`) |
+| 6 | Worktree git config |
+| 7 (highest) | Command-line flags |
 
-This makes it easy to keep personal preferences (engine, style) while enforcing repository-specific commit rules without relying on hosted services. Repository config is applied only after an initial trust prompt.
+Repository TOML config is applied only after an initial trust prompt, since it is a tracked file that could be set by a repo maintainer.
+
+### TOML config files
+
+`~/.config/git-ai-commit/config.toml` for user-wide defaults, `.git-ai-commit.toml` at the repo root for project defaults.
 
 Example: Use Codex with Conventional Commits by default
 
@@ -72,11 +82,47 @@ Supported settings:
 
 - `engine` Default engine name (string)
 - `prompt` Bundled prompt preset: `default`, `conventional`, `gitmoji`, `karma`
-- `prompt_file` Path to a custom prompt file (relative to the config file)
+- `prompt_file` Path to a custom prompt file (relative to the config file; must be within the repo root for repo TOML)
 - `engines.<name>.args` Argument list for the engine command (array of strings)
 - `filter.max_file_lines` Maximum lines per file in diff (default: 100)
 - `filter.exclude_patterns` Additional glob patterns to exclude from diff
 - `filter.default_exclude_patterns` Override built-in exclude patterns
+
+### git config
+
+All settings except `engines.<name>.args` can also be set via `git config` using the `ai-commit` section. This is useful for per-repository preferences in repositories you do not own, since `.git/config` is never committed or pushed.
+
+```sh
+# Set for the current repository only
+git config --local ai-commit.engine claude
+git config --local ai-commit.prompt conventional
+
+# Or apply user-wide defaults
+git config --global ai-commit.engine claude
+git config --global ai-commit.prompt conventional
+```
+
+Supported keys:
+
+| git config key | Equivalent TOML setting |
+|----------------|------------------------|
+| `ai-commit.engine` | `engine` |
+| `ai-commit.prompt` | `prompt` |
+| `ai-commit.promptFile` | `prompt_file` |
+| `ai-commit.maxFileLines` | `filter.max_file_lines` |
+| `ai-commit.excludePatterns` | `filter.exclude_patterns` |
+| `ai-commit.defaultExcludePatterns` | `filter.default_exclude_patterns` |
+
+`excludePatterns` and `defaultExcludePatterns` support multiple values via `git config --add`:
+
+```sh
+git config --add ai-commit.excludePatterns '*.pb.go'
+git config --add ai-commit.excludePatterns 'vendor/**'
+```
+
+Relative `promptFile` paths are resolved from the repo root for `--local`/`--worktree` scope, and from `$HOME` for `--global` scope. No path containment restriction applies — unlike repo TOML, git config cannot be set by a repository maintainer via push.
+
+`prompt` and `promptFile` cannot both be set within the same scope. Setting both returns an error.
 
 ### Engines
 
@@ -109,7 +155,7 @@ args = ["run", "gemma3:4b"]
 
 ### Prompt presets
 
-Bundled presets live in `internal/config/assets/`:
+Bundled presets:
 
 - `default` – Commit messages aligned with the recommendations in [Pro Git](https://git-scm.com/book/ms/v2/Distributed-Git-Contributing-to-a-Project)
 - `conventional` – [Conventional Commits](https://www.conventionalcommits.org/) format
@@ -118,14 +164,20 @@ Bundled presets live in `internal/config/assets/`:
 
 ### Custom Prompts
 
-Example: Use a custom prompt file
+Point to a custom prompt file in TOML config:
 
 ```toml
 engine = "claude"
 prompt_file = "prompts/commit.md"
 ```
 
-Note: `prompt` and `prompt_file` are mutually exclusive within the same config file. If both are set, an error is returned. When settings come from different layers (user config vs repo config), the later layer wins.
+Or via git config (useful for repos you do not own):
+
+```sh
+git config --local ai-commit.promptFile /path/to/prompt.md
+```
+
+`prompt` and `prompt_file` (or `promptFile` in git config) are mutually exclusive within the same config layer. When they come from different layers, the higher-priority layer wins.
 
 ### Diff Filtering
 

@@ -509,6 +509,69 @@ func containsHelper(s, substr string) bool {
 	return false
 }
 
+func TestNonHiddenRepoConfig(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	repoConfig := filepath.Join(repo, "git-ai-commit.toml")
+	if err := os.WriteFile(repoConfig, []byte("engine = 'codex'\n"), 0o644); err != nil {
+		t.Fatalf("write repo config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
+	trustRepoConfig(t, repo, repoConfig)
+
+	withDir(t, repo, func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "codex" {
+			t.Fatalf("DefaultEngine = %q, want codex", cfg.DefaultEngine)
+		}
+	})
+}
+
+func TestNonHiddenRepoConfigPrecedence(t *testing.T) {
+	base := t.TempDir()
+	repo := filepath.Join(base, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatalf("mkdir repo: %v", err)
+	}
+	runGit(t, repo, "init")
+
+	// Both files exist; non-hidden should win
+	nonHidden := filepath.Join(repo, "git-ai-commit.toml")
+	if err := os.WriteFile(nonHidden, []byte("engine = 'codex'\n"), 0o644); err != nil {
+		t.Fatalf("write non-hidden config: %v", err)
+	}
+	hidden := filepath.Join(repo, ".git-ai-commit.toml")
+	if err := os.WriteFile(hidden, []byte("engine = 'gemini'\n"), 0o644); err != nil {
+		t.Fatalf("write hidden config: %v", err)
+	}
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
+	trustRepoConfig(t, repo, nonHidden)
+
+	withDir(t, repo, func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "codex" {
+			t.Fatalf("DefaultEngine = %q, want codex (non-hidden should take precedence)", cfg.DefaultEngine)
+		}
+	})
+}
+
 func trustRepoConfig(t *testing.T, repoRoot, repoConfigPath string) {
 	t.Helper()
 	data, err := os.ReadFile(repoConfigPath)

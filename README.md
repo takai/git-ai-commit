@@ -60,7 +60,7 @@ Configuration is layered. Later layers override earlier ones:
 | 1 (lowest) | System git config (`/etc/gitconfig`) |
 | 2 | Global git config (`~/.gitconfig`) |
 | 3 | User TOML (`~/.config/git-ai-commit/config.toml`) |
-| 4 | Repo TOML (`.git-ai-commit.toml` at repo root) |
+| 4 | Repo TOML (`git-ai-commit.toml` or `.git-ai-commit.toml` at repo root) |
 | 5 | Local git config (`.git/config`) |
 | 6 | Worktree git config |
 | 7 (highest) | Command-line flags |
@@ -69,7 +69,7 @@ Repository TOML config is applied only after an initial trust prompt, since it i
 
 ### TOML config files
 
-`~/.config/git-ai-commit/config.toml` for user-wide defaults, `.git-ai-commit.toml` at the repo root for project defaults.
+`~/.config/git-ai-commit/config.toml` for user-wide defaults, `git-ai-commit.toml` (or `.git-ai-commit.toml`) at the repo root for project defaults.
 
 Example: Use Codex with Conventional Commits by default
 

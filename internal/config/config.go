@@ -309,6 +309,8 @@ func configPath() (string, error) {
 	return filepath.Join(dir, "config.toml"), nil
 }
 
+var repoConfigNames = []string{"git-ai-commit.toml", ".git-ai-commit.toml"}
+
 func repoConfigPath() (string, string, error) {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
 	var stdout bytes.Buffer
@@ -320,18 +322,21 @@ func repoConfigPath() (string, string, error) {
 	if root == "" {
 		return "", "", nil
 	}
-	path := filepath.Join(root, ".git-ai-commit.toml")
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return root, "", nil
+	for _, name := range repoConfigNames {
+		path := filepath.Join(root, name)
+		info, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return "", "", fmt.Errorf("stat repo config: %w", err)
 		}
-		return "", "", fmt.Errorf("stat repo config: %w", err)
+		if info.IsDir() {
+			return "", "", fmt.Errorf("repo config is a directory: %s", path)
+		}
+		return root, path, nil
 	}
-	if info.IsDir() {
-		return "", "", fmt.Errorf("repo config is a directory: %s", path)
-	}
-	return root, path, nil
+	return root, "", nil
 }
 
 func LoadPromptPreset(name string) (string, error) {

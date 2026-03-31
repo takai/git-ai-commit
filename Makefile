@@ -10,3 +10,8 @@ build:
 .PHONY: test
 test:
 	go test ./...
+
+.PHONY: format
+format:
+	gofmt -w .
+	go fix ./...

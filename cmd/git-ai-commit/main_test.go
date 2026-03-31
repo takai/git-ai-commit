@@ -74,6 +74,39 @@ func TestParseArgs_ExcludeShortCluster(t *testing.T) {
 	}
 }
 
+func TestParseArgs_DiffLong(t *testing.T) {
+	opts, err := parseArgs([]string{"--diff"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.diff {
+		t.Error("expected diff to be true")
+	}
+}
+
+func TestParseArgs_DiffShort(t *testing.T) {
+	opts, err := parseArgs([]string{"-d"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.diff {
+		t.Error("expected diff to be true")
+	}
+}
+
+func TestParseArgs_DiffShortCluster(t *testing.T) {
+	opts, err := parseArgs([]string{"-de"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.diff {
+		t.Error("expected diff to be true")
+	}
+	if !opts.edit {
+		t.Error("expected edit to be true")
+	}
+}
+
 func TestParseArgs_EditLong(t *testing.T) {
 	opts, err := parseArgs([]string{"--edit"})
 	if err != nil {

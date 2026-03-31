@@ -95,9 +95,9 @@ func HasHeadCommit() (bool, error) {
 	return true, nil
 }
 
-func CommitWithMessage(message string, amend, edit bool) error {
+func CommitWithMessage(message string, amend, edit, diff bool) error {
 	if edit {
-		return commitWithEdit(message, amend)
+		return commitWithEdit(message, amend, diff)
 	}
 	args := []string{"commit", "-F", "-"}
 	if amend {
@@ -113,7 +113,7 @@ func CommitWithMessage(message string, amend, edit bool) error {
 	return nil
 }
 
-func commitWithEdit(message string, amend bool) error {
+func commitWithEdit(message string, amend, diff bool) error {
 	f, err := os.CreateTemp("", "git-ai-commit-*.txt")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %v", err)
@@ -131,6 +131,9 @@ func commitWithEdit(message string, amend bool) error {
 	args := []string{"commit", "--edit", "-F", f.Name()}
 	if amend {
 		args = append(args, "--amend")
+	}
+	if diff {
+		args = append(args, "--verbose")
 	}
 	cmd := exec.Command("git", args...)
 	cmd.Stdin = os.Stdin

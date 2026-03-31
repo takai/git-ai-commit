@@ -43,6 +43,7 @@ Common options:
 - `--prompt-file VALUE` Path to a custom prompt file
 - `--engine VALUE` Override engine name
 - `--amend` Amend the previous commit
+- `-d`, `--diff` Show staged diff in the editor (implies `--edit`)
 - `-e`, `--edit` Open the generated commit message in an editor before committing
 - `-a`, `--all` Stage modified and deleted files before generating the message
 - `-i`, `--include VALUE` Stage specific files before generating the message

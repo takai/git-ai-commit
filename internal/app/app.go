@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"git-ai-commit/internal/config"
@@ -124,8 +125,11 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	return engine.CLI{Command: name, Args: nil}, name, nil
 }
 
+var ansiEscapeRe = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
+
 func sanitizeMessage(message string) string {
-	clean := strings.TrimSpace(message)
+	clean := ansiEscapeRe.ReplaceAllString(message, "")
+	clean = strings.TrimSpace(clean)
 	if clean == "" {
 		return ""
 	}

@@ -188,6 +188,44 @@ func TestSelectEngineCustomArgs(t *testing.T) {
 	}
 }
 
+func TestSanitizeMessageStripANSIEscapeSequences(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "cursor back and erase",
+			input: "Add uni\x1b[3D\x1b[Kntended behavior fix",
+			want:  "Add unintended behavior fix",
+		},
+		{
+			name:  "multiple ANSI sequences",
+			input: "Fix \x1b[8D\x1b[K\x1b[4D\x1b[Kbug in parser",
+			want:  "Fix bug in parser",
+		},
+		{
+			name:  "SGR color codes",
+			input: "\x1b[32mAdd feature\x1b[0m",
+			want:  "Add feature",
+		},
+		{
+			name:  "no ANSI sequences",
+			input: "Clean commit message",
+			want:  "Clean commit message",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeMessage(tt.input)
+			if got != tt.want {
+				t.Fatalf("sanitizeMessage(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSanitizeMessageCodeFence(t *testing.T) {
 	input := "```\nfeat: add thing\n```"
 	got := sanitizeMessage(input)

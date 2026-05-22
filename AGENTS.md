@@ -1,4 +1,6 @@
-# Project Overview
+# git-ai-commit
+
+Generate Git commit messages from staged diffs using your preferred LLM CLI.
 
 ## Directory Structure
 
@@ -6,18 +8,16 @@
 
 ## Documentation
 
-- README.md – User guide
+- @README.md – User guide
 
 ## Build Commands
 
-- `make build` – Build the project
-- `make test` – Apply fixes and format the code
-- `make format` – Run tests
+- `mise run build` – build the binary.
+- `mise run test` – run the full test suit.
+- `mise run lint` – run lint.
 
 ## Development Guidelines
 
 - Use the red/green/refactor TDD cycle.
-- After changing code, run `make format` and `make test`.
 - Use `git ai-commit` to create commits.
   - Always include a short, clear summary in English using the `--context` option.
-

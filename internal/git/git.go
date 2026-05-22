@@ -118,10 +118,10 @@ func commitWithEdit(message string, amend, diff bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %v", err)
 	}
-	defer os.Remove(f.Name())
+	defer func() { _ = os.Remove(f.Name()) }()
 
 	if _, err := f.WriteString(message); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("failed to write temp file: %v", err)
 	}
 	if err := f.Close(); err != nil {

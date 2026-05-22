@@ -215,7 +215,7 @@ func truncateFileDiff(content string, maxLines int, fileName string) (bool, stri
 	}
 
 	// Add truncation marker
-	result.WriteString(fmt.Sprintf("\n... [%s truncated: showing %d of %d lines]\n", fileName, maxLines, diffLineCount))
+	fmt.Fprintf(&result, "\n... [%s truncated: showing %d of %d lines]\n", fileName, maxLines, diffLineCount)
 
 	return true, result.String()
 }

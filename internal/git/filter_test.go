@@ -196,7 +196,7 @@ index abc123..def456 100644
 	mIdx := strings.Index(result1.Diff, "m.go")
 	zIdx := strings.Index(result1.Diff, "z.go")
 
-	if !(aIdx < mIdx && mIdx < zIdx) {
+	if aIdx >= mIdx || mIdx >= zIdx {
 		t.Errorf("expected files in alphabetical order, got a=%d, m=%d, z=%d", aIdx, mIdx, zIdx)
 	}
 }

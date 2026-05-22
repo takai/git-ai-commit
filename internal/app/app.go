@@ -255,7 +255,7 @@ func writeTempLog(stderr string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, _ = f.WriteString(content)
 	return f.Name()
 }

@@ -378,8 +378,8 @@ func TestUntrustedRepoConfigNonInteractive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("pipe: %v", err)
 	}
-	defer r.Close()
-	defer w.Close()
+	defer func() { _ = r.Close() }()
+	defer func() { _ = w.Close() }()
 	origStdin := os.Stdin
 	os.Stdin = r
 	defer func() {

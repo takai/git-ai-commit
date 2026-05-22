@@ -1,0 +1,21 @@
+[tools]
+go = "1.26.3"
+golangci-lint = "v2.12.2"
+hk = "1.45.0"
+pkl = "0.31.1"
+
+[tasks.build]
+description = "Build the binary"
+run = "mkdir -p bin && go build -o bin/git-ai-commit ./cmd/git-ai-commit"
+
+[tasks.test]
+description = "Run all tests"
+run = "go test ./..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+run = ["go fix ./...", "golangci-lint run ./..."]
+
+[tasks.release-check]
+description = "Run acceptance tests across all engine/preset combinations"
+run = "./scripts/release-check.sh"

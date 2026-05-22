@@ -24,7 +24,7 @@ mise use -g github:takai/git-ai-commit@latest
 Build from source (outputs to `bin/`):
 
 ```sh
-make build
+mise run build
 ```
 
 Put `bin/git-ai-commit` on your `PATH` to enable `git ai-commit`.

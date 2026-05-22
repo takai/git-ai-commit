@@ -15,7 +15,7 @@ mkdir -p "$REPORT_DIR"
 
 if [ ! -x "$BIN" ]; then
   echo "Building bin/git-ai-commit..."
-  (cd "$ROOT_DIR" && make build)
+  (cd "$ROOT_DIR" && mise run build)
 fi
 
 printf "# Release acceptance check\n\n" > "$SUMMARY"

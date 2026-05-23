@@ -172,6 +172,20 @@ func TestSelectEngineGeminiDefault(t *testing.T) {
 	}
 }
 
+func TestSelectEngineAgyDefault(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "agy"
+	cfg.Engines = map[string]config.EngineConfig{}
+
+	_, command, err := selectEngine(cfg)
+	if err != nil {
+		t.Fatalf("selectEngine error: %v", err)
+	}
+	if command != "agy -p {{prompt}}" {
+		t.Fatalf("command = %q", command)
+	}
+}
+
 func TestSelectEngineCustomArgs(t *testing.T) {
 	cfg := config.Default()
 	cfg.DefaultEngine = "claude"

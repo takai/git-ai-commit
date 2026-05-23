@@ -56,6 +56,7 @@ var DefaultEngineArgs = map[string][]string{
 	"claude":       {"-p", "--model", "haiku", "--settings", "{\"attribution\":{\"commit\":\"\",\"pr\":\"\"}}", "--no-session-persistence"},
 	"cursor-agent": {"-p"},
 	"gemini":       {"-m", "gemini-2.5-flash", "-p", "{{prompt}}"},
+	"agy":          {"-p", "{{prompt}}"},
 }
 
 func Default() Config {
@@ -353,7 +354,7 @@ func LoadPromptPreset(name string) (string, error) {
 }
 
 func autodetectEngine() string {
-	candidates := []string{"claude", "gemini", "codex"}
+	candidates := []string{"claude", "agy", "gemini", "codex"}
 	for _, name := range candidates {
 		if _, err := exec.LookPath(name); err == nil {
 			return name

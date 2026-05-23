@@ -82,6 +82,30 @@ func TestAutodetectEngineOrder(t *testing.T) {
 	})
 }
 
+func TestAutodetectEnginePrefersAgyOverGemini(t *testing.T) {
+	configHome := t.TempDir()
+	binDir := filepath.Join(configHome, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	makeExecutable(t, binDir, "codex")
+	makeExecutable(t, binDir, "gemini")
+	makeExecutable(t, binDir, "agy")
+
+	t.Setenv("PATH", binDir)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	withDir(t, t.TempDir(), func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "agy" {
+			t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
+		}
+	})
+}
+
 func makeExecutable(t *testing.T, dir, name string) {
 	t.Helper()
 	path := filepath.Join(dir, name)

@@ -3,7 +3,7 @@
 Generate Git commit messages from staged diffs using your preferred LLM CLI.
 
 git-ai-commit does not talk to LLM APIs directly.
-Instead, it delegates generation to existing LLM CLIs such as Claude Code, Gemini, or Codex, so no API keys, SDKs, or vendor-specific integrations are required.
+Instead, it delegates generation to existing LLM CLIs such as Claude Code, Antigravity, or Codex, so no API keys, SDKs, or vendor-specific integrations are required.
 
 ## Install
 
@@ -132,7 +132,8 @@ git-ai-commit treats LLMs as external commands, not as APIs. This design avoids 
 Supported engines:
 
 - `claude`
-- `gemini`
+- `agy` (Antigravity CLI)
+- `gemini` (deprecated — see note below)
 - `codex`
 
 Built-in defaults are applied when `engines.<name>.args` is not set.
@@ -141,7 +142,9 @@ For `claude`, defaults include:
 - `-p --model haiku`
 - `--settings "{\"attribution\":{\"commit\":\"\",\"pr\":\"\"}}"` (prevents automatic `Co-authored-by` metadata)
 
-If no engine is configured, auto-detection tries commands in this order: `claude` → `gemini` → `codex`. The first available command is used.
+If no engine is configured, auto-detection tries commands in this order: `claude` → `agy` → `gemini` → `codex`. The first available command is used.
+
+> **Gemini CLI deprecation:** Google is transitioning Gemini CLI to Antigravity CLI (`agy`). After **June 18, 2026**, Gemini CLI stops serving requests for Google AI Pro/Ultra subscribers and free users. Gemini CLI continues to work for users on Gemini Code Assist Standard/Enterprise or paid API keys. If you previously used `engine = "gemini"`, switch to `engine = "agy"`.
 
 Any other engine name is treated as a direct command and executed with the prompt on stdin.
 

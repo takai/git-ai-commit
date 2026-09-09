@@ -57,7 +57,7 @@ EOC
 engine = "codex"
 
 [engines.codex]
-args = ["exec", "--model", "gpt-5.4-mini"]
+args = ["exec", "--model", "gpt-5.6-luna"]
 EOC
         ;;
       *)

@@ -258,9 +258,9 @@ func TestGitConfigLocalOverridesRepoToml(t *testing.T) {
 	isolateGitConfig(t)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	// Repo TOML sets engine to "gemini"
+	// Repo TOML sets engine to "agy"
 	repoConfig := filepath.Join(repo, ".git-ai-commit.toml")
-	if err := os.WriteFile(repoConfig, []byte("engine = 'gemini'\n"), 0o644); err != nil {
+	if err := os.WriteFile(repoConfig, []byte("engine = 'agy'\n"), 0o644); err != nil {
 		t.Fatalf("write repo config: %v", err)
 	}
 	trustRepoConfig(t, repo, repoConfig)
@@ -285,14 +285,14 @@ func TestGitConfigLocalOverridesUserToml(t *testing.T) {
 	repo := initTestRepo(t)
 	isolateGitConfig(t)
 
-	// User TOML sets engine to "gemini"
+	// User TOML sets engine to "agy"
 	configHome := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 	configDir := filepath.Join(configHome, "git-ai-commit")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatalf("mkdir config dir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte("engine = 'gemini'\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte("engine = 'agy'\n"), 0o644); err != nil {
 		t.Fatalf("write user config: %v", err)
 	}
 
@@ -316,9 +316,9 @@ func TestGitConfigGlobalOverriddenByUserToml(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 
-	// Global git config sets engine to "gemini"
+	// Global git config sets engine to "agy"
 	globalCfg := filepath.Join(tmp, "global.gitconfig")
-	if err := os.WriteFile(globalCfg, []byte("[ai-commit]\n\tengine = gemini\n"), 0o644); err != nil {
+	if err := os.WriteFile(globalCfg, []byte("[ai-commit]\n\tengine = agy\n"), 0o644); err != nil {
 		t.Fatalf("write global config: %v", err)
 	}
 	t.Setenv("GIT_CONFIG_GLOBAL", globalCfg)

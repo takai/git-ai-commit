@@ -122,6 +122,9 @@ func selectEngine(cfg config.Config) (engine.Engine, string, error) {
 	if args, ok := config.DefaultEngineArgs[name]; ok {
 		return engine.CLI{Command: name, Args: args}, strings.Join(append([]string{name}, args...), " "), nil
 	}
+	if name == "gemini" {
+		return nil, "", fmt.Errorf("engine %q is no longer built in: Gemini CLI was replaced by Antigravity CLI. Use engine = \"agy\", or set engines.gemini.args explicitly", name)
+	}
 	return engine.CLI{Command: name, Args: nil}, name, nil
 }
 

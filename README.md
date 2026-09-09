@@ -133,7 +133,6 @@ Supported engines:
 
 - `claude`
 - `agy` (Antigravity CLI)
-- `gemini` (deprecated — see note below)
 - `codex`
 
 Built-in defaults are applied when `engines.<name>.args` is not set.
@@ -142,9 +141,9 @@ For `claude`, defaults include:
 - `-p --model haiku`
 - `--settings "{\"attribution\":{\"commit\":\"\",\"pr\":\"\"}}"` (prevents automatic `Co-authored-by` metadata)
 
-If no engine is configured, auto-detection tries commands in this order: `claude` → `agy` → `gemini` → `codex`. The first available command is used.
+If no engine is configured, auto-detection tries commands in this order: `claude` → `agy` → `codex`. The first available command is used.
 
-> **Gemini CLI deprecation:** Google is transitioning Gemini CLI to Antigravity CLI (`agy`). After **June 18, 2026**, Gemini CLI stops serving requests for Google AI Pro/Ultra subscribers and free users. Gemini CLI continues to work for users on Gemini Code Assist Standard/Enterprise or paid API keys. If you previously used `engine = "gemini"`, switch to `engine = "agy"`.
+> **Gemini CLI removal:** Google replaced Gemini CLI with Antigravity CLI (`agy`), and Gemini CLI stopped serving requests for Google AI Pro/Ultra subscribers and free users on **June 18, 2026**. `gemini` is no longer a built-in engine: it is not auto-detected (with only Gemini CLI installed you get `no engine configured`), and `engine = "gemini"` without explicit arguments now fails with a message pointing at `agy`. Switch to `engine = "agy"`, or keep running Gemini CLI by setting `engines.gemini.args` yourself.
 
 Any other engine name is treated as a direct command and executed with the prompt on stdin.
 

@@ -8,7 +8,7 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_DIR="$REPORT_BASE/acceptance-$TIMESTAMP"
 SUMMARY="$REPORT_DIR/summary.md"
 
-ENGINES="claude gemini codex"
+ENGINES="claude agy codex"
 PRESETS="conventional default gitmoji karma"
 
 mkdir -p "$REPORT_DIR"
@@ -44,12 +44,12 @@ engine = "claude"
 args = ["-p", "--model", "haiku"]
 EOC
         ;;
-      gemini)
+      agy)
         cat > "$tmp_cfg/git-ai-commit/config.toml" <<'EOC'
-engine = "gemini"
+engine = "agy"
 
-[engines.gemini]
-args = ["-m", "gemini-2.5-flash", "-p", "{{prompt}}"]
+[engines.agy]
+args = ["-p", "{{prompt}}"]
 EOC
         ;;
       codex)

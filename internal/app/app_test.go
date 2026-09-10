@@ -158,16 +158,32 @@ func TestSelectEngineCursorAgentDefault(t *testing.T) {
 	}
 }
 
-func TestSelectEngineGeminiDefault(t *testing.T) {
+func TestSelectEngineGeminiWithoutArgsFails(t *testing.T) {
 	cfg := config.Default()
 	cfg.DefaultEngine = "gemini"
 	cfg.Engines = map[string]config.EngineConfig{}
+
+	_, _, err := selectEngine(cfg)
+	if err == nil {
+		t.Fatalf("selectEngine error = nil, want a migration error")
+	}
+	if !strings.Contains(err.Error(), "agy") {
+		t.Fatalf("selectEngine error = %v, want it to suggest agy", err)
+	}
+}
+
+func TestSelectEngineGeminiWithExplicitArgs(t *testing.T) {
+	cfg := config.Default()
+	cfg.DefaultEngine = "gemini"
+	cfg.Engines = map[string]config.EngineConfig{
+		"gemini": {Args: []string{"-p", "{{prompt}}"}},
+	}
 
 	_, command, err := selectEngine(cfg)
 	if err != nil {
 		t.Fatalf("selectEngine error: %v", err)
 	}
-	if command != "gemini -m gemini-2.5-flash -p {{prompt}}" {
+	if command != "gemini -p {{prompt}}" {
 		t.Fatalf("command = %q", command)
 	}
 }

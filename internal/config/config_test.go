@@ -65,7 +65,7 @@ func TestAutodetectEngineOrder(t *testing.T) {
 		t.Fatalf("mkdir bin: %v", err)
 	}
 	makeExecutable(t, binDir, "codex")
-	makeExecutable(t, binDir, "gemini")
+	makeExecutable(t, binDir, "agy")
 	makeExecutable(t, binDir, "claude")
 
 	t.Setenv("PATH", binDir)
@@ -82,14 +82,35 @@ func TestAutodetectEngineOrder(t *testing.T) {
 	})
 }
 
-func TestAutodetectEnginePrefersAgyOverGemini(t *testing.T) {
+func TestAutodetectEngineIgnoresGemini(t *testing.T) {
+	configHome := t.TempDir()
+	binDir := filepath.Join(configHome, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	makeExecutable(t, binDir, "gemini")
+
+	t.Setenv("PATH", binDir)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	withDir(t, t.TempDir(), func() {
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load error: %v", err)
+		}
+		if cfg.DefaultEngine != "" {
+			t.Fatalf("DefaultEngine = %q, want empty (gemini is no longer autodetected)", cfg.DefaultEngine)
+		}
+	})
+}
+
+func TestAutodetectEnginePrefersAgyOverCodex(t *testing.T) {
 	configHome := t.TempDir()
 	binDir := filepath.Join(configHome, "bin")
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("mkdir bin: %v", err)
 	}
 	makeExecutable(t, binDir, "codex")
-	makeExecutable(t, binDir, "gemini")
 	makeExecutable(t, binDir, "agy")
 
 	t.Setenv("PATH", binDir)
@@ -104,6 +125,12 @@ func TestAutodetectEnginePrefersAgyOverGemini(t *testing.T) {
 			t.Fatalf("DefaultEngine = %q", cfg.DefaultEngine)
 		}
 	})
+}
+
+func TestDefaultEngineArgsHasNoGemini(t *testing.T) {
+	if _, ok := DefaultEngineArgs["gemini"]; ok {
+		t.Fatalf("DefaultEngineArgs still contains gemini")
+	}
 }
 
 func makeExecutable(t *testing.T, dir, name string) {
@@ -134,7 +161,7 @@ func TestLoadRepoConfigOverrides(t *testing.T) {
 		t.Fatalf("mkdir config dir: %v", err)
 	}
 	configPath := filepath.Join(configDir, "config.toml")
-	if err := os.WriteFile(configPath, []byte("engine = 'gemini'\n"), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte("engine = 'agy'\n"), 0o644); err != nil {
 		t.Fatalf("write xdg config: %v", err)
 	}
 
@@ -576,7 +603,7 @@ func TestNonHiddenRepoConfigPrecedence(t *testing.T) {
 		t.Fatalf("write non-hidden config: %v", err)
 	}
 	hidden := filepath.Join(repo, ".git-ai-commit.toml")
-	if err := os.WriteFile(hidden, []byte("engine = 'gemini'\n"), 0o644); err != nil {
+	if err := os.WriteFile(hidden, []byte("engine = 'agy'\n"), 0o644); err != nil {
 		t.Fatalf("write hidden config: %v", err)
 	}
 
